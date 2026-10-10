@@ -1,5 +1,7 @@
 package funkin.backend.musicbeat;
 
+import funkin.backend.Song.Chart;
+
 class Conductor
 {
 	public static var bpm:Float = 100;
@@ -41,7 +43,7 @@ class Conductor
 		curBeat = Math.floor(curStep / 4);
 	}
 
-	public static function mapBPMChanges(song:Dynamic):Void
+	public static function mapBPMChanges(song:Chart):Void
 	{
 		bpmChangeMap = [];
 
@@ -49,24 +51,39 @@ class Conductor
 		baseBpm = curBPM;
 		changeBPM(baseBpm);
 
+		var bpmEvents:Array<Dynamic> = [];
+		for (event in song.events)
+		{
+			if (event.name == "Change BPM")
+				bpmEvents.push(event);
+		}
+
+		bpmEvents.sort(function(a:Dynamic, b:Dynamic):Int {
+			return Reflect.compare(a.time, b.time);
+		});
+
 		var totalSteps:Int = 0;
 		var totalPos:Float = 0;
-		for (i in 0...song.notes.length)
+		for (event in bpmEvents)
 		{
-			var section:Dynamic = song.notes[i];
-			if (section.changeBPM && section.bpm != curBPM)
-			{
-				curBPM = section.bpm;
-				bpmChangeMap.push({
-					stepTime: totalSteps,
-					songTime: totalPos,
-					bpm: curBPM
-				});
-			}
+			if (event.values == null || event.values.length == 0)
+				throw 'Change BPM event at ${event.time} is missing its BPM value.';
 
-			var deltaSteps:Int = section.lengthInSteps;
-			totalSteps += deltaSteps;
-			totalPos += ((60 / curBPM) * 1000 / 4) * deltaSteps;
+			var newBpm:Float = Std.parseFloat(Std.string(event.values[0]));
+			if (Math.isNaN(newBpm) || newBpm <= 0)
+				throw 'Change BPM event at ${event.time} has an invalid BPM value.';
+
+			if (newBpm == curBPM)
+				continue;
+
+			totalSteps += Math.floor((event.time - totalPos) / (60000 / curBPM / 4));
+			totalPos = event.time;
+			curBPM = newBpm;
+			bpmChangeMap.push({
+				stepTime: totalSteps,
+				songTime: totalPos,
+				bpm: curBPM
+			});
 		}
 	}
 

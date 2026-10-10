@@ -475,6 +475,7 @@ class DebugOverlay extends Sprite
 		mainStats.addMetric(new GraphMetric("Frametime (0ms avg)", 300, 40, (graph:GraphMetric, dt:Float) ->
 		{
 			graph.update(dt * 0.001, dt);
+			graph.textField.textColor = 0xFFFFFF;
 			graph.textField.text = 'Frametime (${FlxMath.roundDecimal(graph.getAverage(), 4)}ms avg)';
 		}));
 		addStats(mainStats);
@@ -534,10 +535,10 @@ class DebugOverlay extends Sprite
 		flixelStats.addMetric(new TextMetric("Sounds: ", () -> return Std.string(FlxG.sound.list.length)));
 		addStats(flixelStats);
 
-		final specStats = new DebugStats();
-        specStats.addMetric(new TextMetric("Spec Info", () -> return ""));
-        specStats.addSeparator();
-		specStats.addMetric(new StaticTextMetric("GPU: ", () ->
+		final systemStats = new DebugStats();
+        systemStats.addMetric(new TextMetric("System Info", () -> return ""));
+        systemStats.addSeparator();
+		systemStats.addMetric(new StaticTextMetric("GPU: ", () ->
 		{
 			@:privateAccess
 			final gl = FlxG.stage.context3D.gl;
@@ -545,7 +546,7 @@ class DebugOverlay extends Sprite
 
 			return cleanGPUName(fullFuckingLegalName);
 		}));
-		specStats.addMetric(new StaticTextMetric("CPU: ", () ->
+		systemStats.addMetric(new StaticTextMetric("CPU: ", () ->
 		{
 			@:privateAccess
 			var proc = new Process("wmic", ["cpu", "get", "Name"]);
@@ -557,7 +558,7 @@ class DebugOverlay extends Sprite
 				output = "Unknown";
 			return output;
 		}));
-		specStats.addMetric(new StaticTextMetric("OS: ", () ->
+		systemStats.addMetric(new StaticTextMetric("OS: ", () ->
 		{
 			@:privateAccess
 			switch (Sys.systemName())
@@ -625,7 +626,7 @@ class DebugOverlay extends Sprite
 					return Sys.systemName();
 			}
 		}));
-		addStats(specStats);
+		addStats(systemStats);
 
 		FlxG.stage.addEventListener(KeyboardEvent.KEY_DOWN, (e:KeyboardEvent) ->
 		{

@@ -17,4 +17,24 @@ class CoolUtil {
 
         return FlxMath.roundDecimal(bytes, precision) + _byteUnits[curUnit];
     }
+
+	/**
+     * Lerp but not Framerate Dependent
+     * Delta should be your Elapsed variable
+     *
+	 * Returns the linear interpolation of two numbers if `ratio`
+	 * is between 0 and 1, and the linear extrapolation otherwise.
+	 *
+	 * Examples:
+	 *
+	 * ```haxe
+	 * lerp(a, b, 0) = a
+	 * lerp(a, b, 1) = b
+	 * lerp(5, 15, 0.5) = 10
+	 * lerp(5, 15, -1) = -5
+	 * ```
+	 */
+    public static function coolLerp(a:Float, b:Float, ratio:Float, delta:Float): Float {
+        return FlxMath.lerp(a, b, Math.pow(ratio, delta * 60));
+    }
 }
