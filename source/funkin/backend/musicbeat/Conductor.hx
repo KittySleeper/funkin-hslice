@@ -32,13 +32,14 @@ class Conductor
 
 		for (change in bpmChangeMap)
 		{
-			if (songPosition >= change.songTime)
+			if (songPosition >= change.songTime) {
 				lastChange = change;
-			else
+				changeBPM(lastChange.bpm);
+			} else {
 				break;
+			}
 		}
 
-		changeBPM(lastChange.bpm);
 		curStep = lastChange.stepTime + Math.floor((songPosition - lastChange.songTime) / stepCrochet);
 		curBeat = Math.floor(curStep / 4);
 	}

@@ -4,16 +4,19 @@ class Song {
     public static inline function loadSong(songName:String, songDifficulty:String = "hard"):Chart {
         var finalChart:Chart = {
             bpm: 0,
-            scrollSpeed: 1,
             events: [],
             strumLines: [
                 {
                     notes: [],
-                    type: "opponent"
+                    type: "opponent",
+                    position: [50, 50],
+                    scrollSpeed: 1
                 },
                 {
                     notes: [],
-                    type: "player"
+                    type: "player",
+                    position: [690, 50],
+                    scrollSpeed: 1
                 }
             ]
         };
@@ -24,7 +27,6 @@ class Song {
             songJson = songJson.song;
             
             finalChart.bpm = songJson.bpm;
-            finalChart.scrollSpeed = songJson.speed;
             var currentBpm:Float = finalChart.bpm;
             var sectionStartTime:Float = 0;
 
@@ -64,11 +66,14 @@ class Song {
                         time: daStrumTime,
                         direction: daNoteData,
                         sustainLength: notes[2],
-                        type: notes[3]
+                        type: notes[3] == null || notes[3] == "" ? "default" : notes[3]
                     };
                     
-                    finalChart.strumLines[gottaHitNote ? 0 : 1].notes.push(note);
+                    finalChart.strumLines[gottaHitNote ? 1 : 0].notes.push(note);
                 }
+
+                for (strum in finalChart.strumLines)
+                    strum.scrollSpeed = songJson.speed != null ? songJson.speed : 1;
 
                 sectionStartTime += section.lengthInSteps * (60000 / currentBpm / 4);
             }
@@ -79,7 +84,6 @@ class Song {
 
 typedef Chart = {
     bpm:Float,
-    scrollSpeed:Float,
     events:Array<EventData>,
     strumLines:Array<LineData>
 }
@@ -92,7 +96,9 @@ typedef EventData = {
 
 typedef LineData = {
     notes:Array<NoteData>,
-    type:String
+    type:String,
+    position:Array<Float>,
+    scrollSpeed:Float
 }
 
 typedef NoteData = {

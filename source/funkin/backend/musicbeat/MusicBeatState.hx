@@ -2,6 +2,18 @@ package funkin.backend.musicbeat;
 
 import flixel.FlxState;
 
+/**
+	* State That Handles Things For Conductor
+	* Conductor Can Not Be Used Outside Of This State Unless You Are Manually Handling It Yourself.
+	* TODO: Maybe Make Some Helper Functions In Conductor So You Can Just Do
+	* ```haxe
+	* var conductor:Conductor = new Conductor();
+	* 
+	* function update(elapsed:Float) {
+	* 	conductor.update();
+	* }
+	* ```
+ */
 class MusicBeatState extends FlxState
 {
 	public var curBeat(get, never):Int;

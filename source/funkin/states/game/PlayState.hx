@@ -1,5 +1,7 @@
-package;
+package funkin.states.game;
 
+import funkin.states.game.objects.StrumLine;
+import flixel.group.FlxSpriteGroup.FlxTypedSpriteGroup;
 import openfl.desktop.ClipboardFormats;
 import openfl.desktop.Clipboard;
 import haxe.Json;
@@ -12,8 +14,8 @@ class PlayState extends MusicBeatState
 	public static var events:Array<EventData> = [];
 
 	public var tracks:FlxSoundGroup = new FlxSoundGroup();
-	public var notes:FlxTypedGroup<FlxSprite> = new FlxTypedGroup();
 
+	public var strumLines:FlxTypedSpriteGroup<StrumLine> = new FlxTypedSpriteGroup();
 	public var healthBarBG:FlxSprite;
 	public var healthBar:FlxBar;
 
@@ -45,12 +47,21 @@ class PlayState extends MusicBeatState
 		Conductor.mapBPMChanges(songData);
 
 		camGame = new FlxCamera();
+		camGame.bgColor = FlxColor.GRAY;
 		FlxG.cameras.add(camGame);
 
 		camHUD = new FlxCamera();
+		camHUD.bgColor = FlxColor.TRANSPARENT;
 		FlxG.cameras.add(camHUD, false);
 
 		super.create();
+
+		add(strumLines);
+
+		for (i => strumData in songData.strumLines) {
+			var strum:StrumLine = new StrumLine(strumData.position[0], strumData.position[1], strumData, i);
+			strumLines.add(strum);
+		}
 
 		healthBarBG = new FlxSprite(0, FlxG.height * 0.9).loadGraphic(Paths.image('game/healthBar'));
 		healthBarBG.screenCenter(X);
@@ -63,7 +74,7 @@ class PlayState extends MusicBeatState
 		healthBar.createFilledBar(0xFFFF0000, 0xFF66FF33);
 		add(healthBar);
 
-		for (obj in [healthBarBG, healthBar])
+		for (obj in [healthBarBG, healthBar, strumLines])
 			obj.camera = camHUD;
 	}
 
@@ -97,6 +108,12 @@ class PlayState extends MusicBeatState
 			camGame.zoom += 0.015 * camZoomingStrength;
 			camHUD.zoom += 0.03 * camZoomingStrength;
 		}
+	}
+
+	override public function onFocus():Void
+	{
+		super.onFocus();
+		// FlxG.sound.music.play();
 	}
 
 	function eventHit(name:String, values:Array<Dynamic>)
