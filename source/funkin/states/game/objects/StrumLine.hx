@@ -6,6 +6,7 @@ class StrumLine extends FlxTypedSpriteGroup<FlxSprite> {
     var data:LineData;
     var chartIndex:Int = 0;
     public var notes:FlxTypedGroup<Note> = new FlxTypedGroup();
+    public var characters:Array<Character> = [];
 
     public static var directionList:Array<String> = ["left", "down", "up", "right"];
     public static var seperation:Float = 120;
@@ -42,15 +43,34 @@ class StrumLine extends FlxTypedSpriteGroup<FlxSprite> {
     override public function update(elapsed:Float) {
         super.update(elapsed);
 
-        for (note in notes.members) {
+        var i:Int = notes.members.length - 1;
+        while (i >= 0) {
+            var note:Note = notes.members[i];
+            if (note == null) {
+                i--;
+                continue;
+            }
+
             note.y = (members[note.noteData.direction].y - (Conductor.songPosition - note.noteData.time) * (0.45 * FlxMath.roundDecimal(data.scrollSpeed, 2)));
 
             if (Conductor.songPosition >= note.noteData.time) {
+                var direction:Int = note.noteData.direction;
+                notes.remove(note, true);
+                remove(note);
+                
+                for (char in characters) {
+                    char.playAnim('sing${directionList[direction].toUpperCase()}', true);
+                    char.isSinging = true;
+                    char.holdTimer = 0;
+                }
+
                 note.destroy();
+                i--;
                 continue;
             }
 
             note.exists = note.visible = note.y + note.height > 0 && note.y < FlxG.height;
+            i--;
         }
     }
 }

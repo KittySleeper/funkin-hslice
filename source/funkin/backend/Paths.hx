@@ -66,26 +66,26 @@ class Paths
 		}
 	}
 
-	inline static public function image(key:String):FlxGraphic
+	inline static public function image(key:String, folder:String = "images"):FlxGraphic
 	{
-		if (epicCacheFromOhio.exists('images/$key.png'))
+		if (epicCacheFromOhio.exists('$folder/$key.png'))
 		{
-			return FlxGraphic.fromGraphic(epicCacheFromOhio.get('images/$key.png'));
+			return FlxGraphic.fromGraphic(epicCacheFromOhio.get('$folder/$key.png'));
 		}
 		else
 		{
-			var bitmap = BitmapData.fromFile(rawFile('images/$key.png'));
+			var bitmap = BitmapData.fromFile(rawFile('$folder/$key.png'));
 			var epicImage:FlxGraphic = FlxGraphic.fromBitmapData(bitmap);
-			epicCacheFromOhio.set('images/$key.png', epicImage);
+			epicCacheFromOhio.set('$folder/$key.png', epicImage);
 			epicImage.persist = true;
 			return epicImage;
 		}
 	}
 
-	inline static public function getSparrowAtlas(key:String):FlxAtlasFrames
-		return FlxAtlasFrames.fromSparrow(image(key), xml('images/$key'));
+	inline static public function getSparrowAtlas(key:String, folder:String = "images"):FlxAtlasFrames
+		return FlxAtlasFrames.fromSparrow(image(key, folder), xml('$folder/$key'));
 
-	inline static public function getAnimateAtlas(key:String):FlxAnimateFrames
+	inline static public function getAnimateAtlas(key:String, folder:String = "images"):FlxAnimateFrames
 	{
 		if (epicCacheFromOhio.exists('images/$key'))
 		{
@@ -93,15 +93,15 @@ class Paths
 		}
 		else
 		{
-			var frames:FlxAnimateFrames = FlxAnimateFrames.fromAnimate(rawFile('images/$key'));
+			var frames:FlxAnimateFrames = FlxAnimateFrames.fromAnimate(rawFile('$folder/$key'));
 			frames.parent.persist = true;
-			epicCacheFromOhio.set('images/$key', frames);
+			epicCacheFromOhio.set('$folder/$key', frames);
 			return frames;
 		}
 	}
 
-	inline static public function getPackerAtlas(key:String)
-		return FlxAtlasFrames.fromSpriteSheetPacker(image(key), txt('images/$key'));
+	inline static public function getPackerAtlas(key:String, folder = "images")
+		return FlxAtlasFrames.fromSpriteSheetPacker(image(key, folder), txt('$folder/$key'));
 
 	inline static public function xml(key:String)
 		return fileData('$key.xml');
