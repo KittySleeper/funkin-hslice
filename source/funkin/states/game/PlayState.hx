@@ -53,12 +53,12 @@ class PlayState extends MusicBeatState
 		FlxG.sound.music = tracks.sounds[0];
 
 		Conductor.mapBPMChanges(songData);
-
+		
 		camGame = new FlxCamera();
 		camGame.bgColor = FlxColor.GRAY;
 		camGame.zoom = gameDefaultZoom;
 		camGame.follow(gameCameraFollow, LOCKON, FlxMath.MAX_VALUE_FLOAT);
-		FlxG.cameras.add(camGame);
+		FlxG.cameras.reset(camGame);
 
 		camHUD = new FlxCamera();
 		camHUD.zoom = hudDefaultZoom;
@@ -113,7 +113,7 @@ class PlayState extends MusicBeatState
 			if (track.playing && (track.time < tracks.sounds[0].time - 5 || track.time > tracks.sounds[0].time + 5))
 				track.time = tracks.sounds[0].time;
 
-		FlxG.camera.zoom = CoolUtil.coolLerp(gameDefaultZoom, FlxG.camera.zoom, 0.95, elapsed);
+		camGame.zoom = CoolUtil.coolLerp(gameDefaultZoom, camGame.zoom, 0.95, elapsed);
 		camHUD.zoom = CoolUtil.coolLerp(hudDefaultZoom, camHUD.zoom, 0.95, elapsed);
 
 		super.update(elapsed);

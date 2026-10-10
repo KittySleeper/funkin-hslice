@@ -43,11 +43,12 @@ class StrumLine extends FlxTypedSpriteGroup<FlxSprite> {
     override public function update(elapsed:Float) {
         super.update(elapsed);
 
-        var i:Int = notes.members.length - 1;
-        while (i >= 0) {
+        var i:Int = 0;
+
+        while (i <= notes.members.length) {
             var note:Note = notes.members[i];
             if (note == null) {
-                i--;
+                i++;
                 continue;
             }
 
@@ -65,12 +66,12 @@ class StrumLine extends FlxTypedSpriteGroup<FlxSprite> {
                 }
 
                 note.destroy();
-                i--;
+                i++;
                 continue;
             }
 
             note.exists = note.visible = note.y + note.height > 0 && note.y < FlxG.height;
-            i--;
+            i++;
         }
     }
 }
