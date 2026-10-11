@@ -6,6 +6,7 @@ import flixel.group.FlxGroup.FlxTypedGroup;
 import flixel.FlxCamera;
 import flixel.ui.FlxBar;
 import flixel.util.FlxColor;
+import flixel.util.FlxAxes;
 
 import flixel.math.FlxMath;
 

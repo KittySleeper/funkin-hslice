@@ -13,7 +13,8 @@ class Main extends Sprite
 	{
 		super();
 		
-		game = new FlxGame(0, 0, funkin.states.game.PlayState, 0, 0, true);
+		game = new FlxGame(0, 0, funkin.states.menus.freeplay.FreeplayState, 0, 0, true);
+		
 		@:privateAccess
 		game._customSoundTray = funkin.ui.FunkinSoundTray;
 		addChild(game);

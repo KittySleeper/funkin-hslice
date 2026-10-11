@@ -33,9 +33,8 @@ class Character extends FlxAnimate
 		this.characterName = characterName;
 		this.isPlayer = isPlayer;
 
-		trace('$characterName');
-
-		var charJson:Dynamic = Paths.exists('characters/$characterName/data.json') ? Paths.json('characters/$characterName/data') : Paths.json('characters/bf/data');
+		var characterFolder:String = Paths.exists('characters/$characterName/data.json') ? characterName : "bf";
+		var charJson:Dynamic = Paths.json('characters/$characterFolder/data');
 
 		if (charJson.format != null && charJson.format == "HSlice Format")
 		{ // HSlice / Better Than VSlice
@@ -78,9 +77,9 @@ class Character extends FlxAnimate
 		switch (characterData.imageType)
 		{
 			case "atlas":
-				frames = Paths.getAnimateAtlas(characterData.imagePath, 'characters/$characterName');
+				frames = Paths.getAnimateAtlas(characterData.imagePath, 'characters/$characterFolder');
 			default:
-				frames = Paths.getSparrowAtlas(characterData.imagePath, 'characters/$characterName');
+				frames = Paths.getSparrowAtlas(characterData.imagePath, 'characters/$characterFolder');
 				for (anim in characterData.animations)
 				{
 					animation.addByPrefix(anim.prefix, anim.postfix, anim.fps, anim.looped);

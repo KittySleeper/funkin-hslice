@@ -1,5 +1,6 @@
 package funkin.states.game;
 
+import funkin.states.menus.freeplay.FreeplayState;
 import funkin.states.game.objects.Character;
 import flixel.FlxObject;
 import flixel.math.FlxPoint;
@@ -12,8 +13,8 @@ import haxe.Json;
 class PlayState extends MusicBeatState
 {
 	public static var songData:Chart;
-	public static var curSong:String = "malediction";
-	public static var curDifficulty:String = "hard";
+	public static var curSong:String = "";
+	public static var curDifficulty:String = "";
 	public static var events:Array<EventData> = [];
 
 	public var tracks:FlxSoundGroup = new FlxSoundGroup();
@@ -35,23 +36,24 @@ class PlayState extends MusicBeatState
 	public var camZoomingInterval:Int = 4;
 	public var camZoomingStrength:Float = 1;
 
+	public var endSong:Void->Void = () -> {
+		FlxG.switchState(() -> new FreeplayState());
+	};
+
 	override public function create()
 	{
-		songData = Song.loadSong(curSong, curDifficulty);
 		events = songData.events.copy();
 
 		Clipboard.generalClipboard.setData(ClipboardFormats.TEXT_FORMAT, Json.stringify(songData, null, "\t"));
 
 		for (track in Paths.readDirectory('songs/$curSong/tracks'))
-		{
 			tracks.add(FlxG.sound.play(Paths.song('$curSong/tracks/$track')));
-		}
 
-		if (tracks.sounds.length == 0)
+		if (tracks.sounds.isEmpty())
 			throw 'Song "$curSong" has no audio tracks in assets/songs/$curSong/tracks.';
 
 		FlxG.sound.music = tracks.sounds[0];
-
+		FlxG.sound.music.onComplete = endSong;
 		Conductor.mapBPMChanges(songData);
 		
 		camGame = new FlxCamera();
@@ -64,7 +66,7 @@ class PlayState extends MusicBeatState
 		camHUD.zoom = hudDefaultZoom;
 		camHUD.bgColor = FlxColor.TRANSPARENT;
 		FlxG.cameras.add(camHUD, false);
-
+		super.create();
 		super.create();
 
 		add(strumLines);
@@ -100,6 +102,8 @@ class PlayState extends MusicBeatState
 
 	override public function update(elapsed:Float)
 	{
+		if (FlxG.keys.justPressed.ESCAPE) endSong();
+
 		for (event in events)
 		{
 			if (Conductor.songPosition >= event.time)
@@ -142,16 +146,16 @@ class PlayState extends MusicBeatState
 
 	function eventHit(event:EventData)
 	{
-		trace(event.name);
-
 		switch event.name
 		{
 			case "Camera Target": // dear god i need too fix this up-
-				trace(event.values[0]);
 				gameCameraFollow.setPosition(strumLines.members[event.values[0]].characters[0].getMidpoint().x
 					+ strumLines.members[event.values[0]].characters[0].characterData.cameraOffset[0],
 					strumLines.members[event.values[0]].characters[0].getMidpoint().y
 					+ strumLines.members[event.values[0]].characters[0].characterData.cameraOffset[1]);
+			case "Camera Beat Interval Change":
+				camZoomingInterval = event.values[0];
+				camZoomingStrength = event.values[1];
 		}
 	}
 }

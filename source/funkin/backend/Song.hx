@@ -3,7 +3,7 @@ package funkin.backend;
 class Song
 {
 	/**
-	 * Loads A Chart, Converts Psych And Legacy Charts Currently.
+	 * Loads a chart and converts V-Slice, Psych, and legacy charts.
 	 * @param songName String (The Name Of The Song)
 	 * @param songDifficulty String (The Difficulty Of The Song)
 	 * @return Chart
@@ -20,7 +20,7 @@ class Song
 					type: "opponent",
 					position: [50, 50],
 					characters: [],
-                    charPosition: "opponent",
+					charPosition: "opponent",
 					scrollSpeed: 1
 				},
 				{
@@ -28,17 +28,105 @@ class Song
 					type: "player",
 					position: [690, 50],
 					characters: [],
-                    charPosition: "player",
+					charPosition: "player",
 					scrollSpeed: 1
 				}
 			]
 		};
 
-		var songJson:Dynamic = Paths.json('songs/$songName/charts/$songDifficulty');
+		var chartPath:String = 'songs/$songName/charts';
+		var songJson:Dynamic = Paths.exists('$chartPath/$songDifficulty.json') ? Paths.json('$chartPath/$songDifficulty') : Paths.json('$chartPath/chart');
 
 		if (songJson.format != null && songJson.format == "HSlice Format")
 		{ // HSlice / Better Than VSlice
 			finalChart = songJson;
+		}
+		else if (songJson.generatedBy != null && cast(songJson.generatedBy, String).contains("Friday Night Funkin'"))
+		{ // VSlice chart
+			var metadata:Dynamic = Paths.json('$chartPath/metadata');
+			var playData:Dynamic = metadata.playData;
+			var timeChanges:Array<Dynamic> = cast metadata.timeChanges;
+
+			if (timeChanges == null || timeChanges.length == 0)
+				throw 'V-Slice chart for "$songName" is missing metadata time changes.';
+
+			finalChart.bpm = timeChanges[0].bpm;
+			var previousBpm:Float = finalChart.bpm;
+			for (i in 1...timeChanges.length)
+			{
+				var timeChange:Dynamic = timeChanges[i];
+				if (timeChange.bpm != previousBpm)
+				{
+					finalChart.events.push({
+						time: timeChange.t,
+						name: "Change BPM",
+						values: [timeChange.bpm]
+					});
+					previousBpm = timeChange.bpm;
+				}
+			}
+
+			var characters:Dynamic = playData != null ? playData.characters : null;
+			if (characters != null)
+			{
+				if (characters.opponent != null)
+					finalChart.strumLines[0].characters.push(characters.opponent);
+				if (characters.player != null)
+					finalChart.strumLines[1].characters.push(characters.player);
+			}
+
+			var scrollSpeeds:Dynamic = songJson.scrollSpeed;
+			var scrollSpeed:Float = scrollSpeeds != null
+				&& Reflect.field(scrollSpeeds, songDifficulty) != null ? Reflect.field(scrollSpeeds, songDifficulty) : 1;
+			for (strum in finalChart.strumLines)
+				strum.scrollSpeed = scrollSpeed;
+
+			var difficultyNotes:Dynamic = songJson.notes != null ? Reflect.field(songJson.notes, songDifficulty) : null;
+			if (difficultyNotes == null)
+				throw 'V-Slice chart for "$songName" has no notes for difficulty "$songDifficulty".';
+
+			for (sourceNote in (cast difficultyNotes : Array<Dynamic>))
+			{
+				var lane:Int = Std.int(sourceNote.d);
+				var isOpponent:Bool = lane >= 4;
+				var note:NoteData = {
+					time: sourceNote.t,
+					direction: isOpponent ? lane - 4 : lane,
+					sustainLength: sourceNote.l != null ? sourceNote.l : 0,
+					type: sourceNote.k != null && sourceNote.k != "" ? sourceNote.k : "default"};
+
+				finalChart.strumLines[isOpponent ? 0 : 1].notes.push(note);
+			}
+
+			if (songJson.events != null)
+			{
+				for (sourceEvent in (cast songJson.events : Array<Dynamic>))
+				{
+					switch sourceEvent.e
+					{
+						case "FocusCamera":
+							var values:Dynamic = sourceEvent.v;
+							finalChart.events.push({
+								time: sourceEvent.t,
+								name: "Camera Target",
+								values: [values.char == 1 ? 0 : 1, values.ease, values.duration, values.x, values.y]
+							});
+						case "SetCameraBop":
+							var values:Dynamic = sourceEvent.v;
+							finalChart.events.push({
+								time: sourceEvent.t,
+								name: "Camera Beat Interval Change",
+								values: [values.intensity, values.rate]
+							});
+						default:
+							finalChart.events.push({
+								time: sourceEvent.t,
+								name: sourceEvent.e,
+								values: [sourceEvent.v]
+							});
+					}
+				}
+			}
 		}
 		else if (songJson.song != null)
 		{ // Psych / Legacy
@@ -140,7 +228,7 @@ typedef LineData =
 	position:Array<Float>,
 	scrollSpeed:Float,
 	characters:Array<String>,
-    charPosition:String
+	charPosition:String
 }
 
 typedef NoteData =
