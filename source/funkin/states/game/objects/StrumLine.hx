@@ -1,4 +1,5 @@
 package funkin.states.game.objects;
+//TODO: make some type of note skin system, 
 
 import flixel.group.FlxSpriteGroup.FlxTypedSpriteGroup;
 
@@ -22,15 +23,7 @@ class StrumLine extends FlxTypedSpriteGroup<FlxSprite> {
         for (i in 0...4) {
             var direction:String = directionList[i];
 
-            var strum:FlxSprite = new FlxSprite(seperation * i);
-            strum.frames = Paths.getSparrowAtlas("game/receptors");
-            strum.animation.addByPrefix("static", '$direction static', 24);
-            strum.animation.addByPrefix("press", '$direction press', 24);
-            strum.animation.addByPrefix("confirm", '$direction confirm', 24);
-            strum.animation.play("static", true);
-            strum.antialiasing = true;
-            strum.setGraphicSize(Std.int(strum.frameWidth * 0.75));
-            strum.updateHitbox();
+            var strum:Strum = new Strum(seperation * i, 0, direction);
             add(strum);
         }
 
@@ -56,7 +49,7 @@ class StrumLine extends FlxTypedSpriteGroup<FlxSprite> {
             }
 
             var note:Note = cast member;
-            var receptor:FlxSprite = members[note.noteData.direction];
+            var receptor:Strum = cast members[note.noteData.direction];
 
             var pixelsPerMs:Float = 0.45 * FlxMath.roundDecimal(data.scrollSpeed, 2);
             note.y = receptor.y - (Conductor.songPosition - note.noteData.time) * pixelsPerMs;
@@ -66,6 +59,10 @@ class StrumLine extends FlxTypedSpriteGroup<FlxSprite> {
                 note.wasHit = true;
                 var direction:Int = note.noteData.direction;
                 var animationName:String = 'sing${directionList[direction].toUpperCase()}';
+
+                if (note.noteData.sustainLength > 0)
+                    receptor.beginSustainConfirm();
+                receptor.playAnim("confirm", true);
 
                 for (char in characters) {
                     char.playAnim(animationName, true);
@@ -84,6 +81,8 @@ class StrumLine extends FlxTypedSpriteGroup<FlxSprite> {
             }
 
             if (note.wasHit && Conductor.songPosition >= noteEndTime) {
+                if (note.noteData.sustainLength > 0)
+                    receptor.endSustainConfirm();
                 if (note.sustainBody != null) {
                     notes.remove(note.sustainBody);
                     notes.remove(note.sustainEnd);
@@ -107,7 +106,7 @@ class StrumLine extends FlxTypedSpriteGroup<FlxSprite> {
         while (nextNoteIndex < pendingNotes.length)
         {
             var noteData:NoteData = pendingNotes[nextNoteIndex];
-            var receptor:FlxSprite = members[noteData.direction];
+            var receptor:Strum = cast members[noteData.direction];
             var spawnTime:Float = noteData.time;
 
             if (pixelsPerMs > 0)
