@@ -135,7 +135,8 @@ class PlayState extends MusicBeatState
 
 		for (strum in strumLines)
 			for (char in strum.characters)
-				char.dance();
+				if (!char.isSinging)
+					char.dance();
 	}
 
 	override public function onFocus():Void
@@ -154,8 +155,8 @@ class PlayState extends MusicBeatState
 					strumLines.members[event.values[0]].characters[0].getMidpoint().y
 					+ strumLines.members[event.values[0]].characters[0].characterData.cameraOffset[1]);
 			case "Camera Beat Interval Change":
-				camZoomingInterval = event.values[0];
-				camZoomingStrength = event.values[1];
+				camZoomingStrength = event.values[0];
+				camZoomingInterval = event.values[1];
 		}
 	}
 }

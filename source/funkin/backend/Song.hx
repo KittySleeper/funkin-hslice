@@ -17,7 +17,7 @@ class Song
 			strumLines: [
 				{
 					notes: [],
-					type: "opponent",
+					cpu: true,
 					position: [50, 50],
 					characters: [],
 					charPosition: "opponent",
@@ -25,7 +25,7 @@ class Song
 				},
 				{
 					notes: [],
-					type: "player",
+					cpu: false,
 					position: [690, 50],
 					characters: [],
 					charPosition: "player",
@@ -224,7 +224,7 @@ typedef EventData =
 typedef LineData =
 {
 	notes:Array<NoteData>,
-	type:String,
+	cpu:Bool,
 	position:Array<Float>,
 	scrollSpeed:Float,
 	characters:Array<String>,

@@ -5,7 +5,9 @@ import flixel.group.FlxSpriteGroup.FlxTypedSpriteGroup;
 class StrumLine extends FlxTypedSpriteGroup<FlxSprite> {
     var data:LineData;
     var chartIndex:Int = 0;
-    public var notes:FlxTypedGroup<Note> = new FlxTypedGroup();
+    var pendingNotes:Array<NoteData> = [];
+    var nextNoteIndex:Int = 0;
+    public var notes:FlxTypedSpriteGroup<FlxSprite> = new FlxTypedSpriteGroup();
     public var characters:Array<Character> = [];
 
     public static var directionList:Array<String> = ["left", "down", "up", "right"];
@@ -32,46 +34,96 @@ class StrumLine extends FlxTypedSpriteGroup<FlxSprite> {
             add(strum);
         }
 
-        for (noteData in data.notes) {
-            var receptor:FlxSprite = members[noteData.direction];
-            var note:Note = new Note(receptor.x - x, receptor.y - y, noteData);
-            notes.add(note);
-            add(note);
-        }
+        add(notes);
+
+        pendingNotes = data.notes.copy();
+        pendingNotes.sort(function(a:NoteData, b:NoteData):Int {
+            return Reflect.compare(a.time, b.time);
+        });
     }
 
     override public function update(elapsed:Float) {
+        spawnNotes();
         super.update(elapsed);
 
         var i:Int = 0;
 
-        while (i <= notes.members.length) {
-            var note:Note = notes.members[i];
-            if (note == null) {
+        while (i < notes.members.length) {
+            var member:FlxSprite = notes.members[i];
+            if (member == null || !Std.isOfType(member, Note)) {
                 i++;
                 continue;
             }
 
-            note.y = (members[note.noteData.direction].y - (Conductor.songPosition - note.noteData.time) * (0.45 * FlxMath.roundDecimal(data.scrollSpeed, 2)));
+            var note:Note = cast member;
+            var receptor:FlxSprite = members[note.noteData.direction];
 
-            if (Conductor.songPosition >= note.noteData.time) {
+            var pixelsPerMs:Float = 0.45 * FlxMath.roundDecimal(data.scrollSpeed, 2);
+            note.y = receptor.y - (Conductor.songPosition - note.noteData.time) * pixelsPerMs;
+            var noteEndTime:Float = note.noteData.time + note.noteData.sustainLength;
+
+            if (!note.wasHit && Conductor.songPosition >= note.noteData.time) {
+                note.wasHit = true;
                 var direction:Int = note.noteData.direction;
-                notes.remove(note, true);
-                remove(note);
-                
+                var animationName:String = 'sing${directionList[direction].toUpperCase()}';
+
                 for (char in characters) {
-                    char.playAnim('sing${directionList[direction].toUpperCase()}', true);
+                    char.playAnim(animationName, true);
                     char.isSinging = true;
                     char.holdTimer = 0;
                 }
+            }
 
+            note.updateSustain(pixelsPerMs, receptor.y + receptor.height * 0.5, Conductor.songPosition);
+
+            if (note.wasHit && note.noteData.sustainLength > 0 && Conductor.songPosition < noteEndTime) {
+                for (char in characters) {
+                    char.isSinging = true;
+                    char.holdTimer = 0;
+                }
+            }
+
+            if (note.wasHit && Conductor.songPosition >= noteEndTime) {
+                if (note.sustainBody != null) {
+                    notes.remove(note.sustainBody);
+                    notes.remove(note.sustainEnd);
+                }
+                notes.remove(note);
                 note.destroy();
                 i++;
                 continue;
             }
 
-            note.exists = note.visible = note.y + note.height > 0 && note.y < FlxG.height;
+            note.visible = !note.wasHit && note.y + note.height > 0 && note.y < FlxG.height;
             i++;
+        }
+    }
+
+    function spawnNotes():Void
+    {
+        var pixelsPerMs:Float = 0.45 * FlxMath.roundDecimal(data.scrollSpeed, 2);
+        var spawnBoundary:Float = FlxG.height + 150 - y;
+
+        while (nextNoteIndex < pendingNotes.length)
+        {
+            var noteData:NoteData = pendingNotes[nextNoteIndex];
+            var receptor:FlxSprite = members[noteData.direction];
+            var spawnTime:Float = noteData.time;
+
+            if (pixelsPerMs > 0)
+                spawnTime -= (spawnBoundary - receptor.y) / pixelsPerMs;
+
+            if (Conductor.songPosition < spawnTime)
+                break;
+
+            var note:Note = new Note(receptor.x - x, receptor.y - y, noteData);
+            if (note.sustainBody != null)
+            {
+                notes.add(note.sustainBody);
+                notes.add(note.sustainEnd);
+            }
+            notes.add(note);
+            nextNoteIndex++;
         }
     }
 }
