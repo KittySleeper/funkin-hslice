@@ -24,8 +24,13 @@ class Strum extends FlxSprite
 		var staticOffsetX:Float = offset.x;
 		var staticOffsetY:Float = offset.y;
 		var staticFrame = frames.frames[animation.getByName("static").frames[0]];
+		var pressFrame = frames.frames[animation.getByName("press").frames[0]];
 		var confirmFrame = frames.frames[animation.getByName("confirm").frames[0]];
 		animOffsets.set("static", [staticOffsetX, staticOffsetY]);
+		animOffsets.set("press", [
+			staticOffsetX + (pressFrame.sourceSize.x - staticFrame.sourceSize.x) * scale.x * 0.5,
+			staticOffsetY + (pressFrame.sourceSize.y - staticFrame.sourceSize.y) * scale.y * 0.5
+		]);
 		animOffsets.set("confirm", [
 			staticOffsetX + (confirmFrame.sourceSize.x - staticFrame.sourceSize.x) * scale.x * 0.5,
 			staticOffsetY + (confirmFrame.sourceSize.y - staticFrame.sourceSize.y) * scale.y * 0.5
