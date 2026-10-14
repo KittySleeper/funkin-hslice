@@ -9,6 +9,7 @@ import flixel.group.FlxSpriteGroup.FlxTypedSpriteGroup;
 import openfl.desktop.ClipboardFormats;
 import openfl.desktop.Clipboard;
 import haxe.Json;
+import funkin.backend.util.MemoryUtil;
 
 class PlayState extends MusicBeatState
 {
@@ -100,11 +101,16 @@ class PlayState extends MusicBeatState
 			obj.camera = camHUD;
 	}
 
-	override public function destroy() {
+	override public function destroy()
+	{
+		songData.events = null;
+		songData.strumLines = null;
 		songData = null;
 		events = null;
 
 		super.destroy();
+
+		MemoryUtil.clearAll();
 	}
 
 	override public function update(elapsed:Float)
