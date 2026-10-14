@@ -100,10 +100,15 @@ class PlayState extends MusicBeatState
 			obj.camera = camHUD;
 	}
 
+	override public function destroy() {
+		songData = null;
+		events = null;
+
+		super.destroy();
+	}
+
 	override public function update(elapsed:Float)
 	{
-		playerInput();
-
 		if (FlxG.keys.justPressed.ESCAPE) endSong();
 
 		for (event in events)
@@ -123,35 +128,6 @@ class PlayState extends MusicBeatState
 		camHUD.zoom = CoolUtil.coolLerp(hudDefaultZoom, camHUD.zoom, 0.95, elapsed);
 
 		super.update(elapsed);
-	}
-
-	function playerInput():Void
-	{
-		final justPressed:Array<Bool> = [
-			FlxG.keys.justPressed.LEFT,
-			FlxG.keys.justPressed.DOWN,
-			FlxG.keys.justPressed.UP,
-			FlxG.keys.justPressed.RIGHT
-		];
-		final held:Array<Bool> = [
-			FlxG.keys.pressed.LEFT,
-			FlxG.keys.pressed.DOWN,
-			FlxG.keys.pressed.UP,
-			FlxG.keys.pressed.RIGHT
-		];
-
-		for (strum in strumLines)
-		{
-			if (!strum.isPlayerLine)
-				continue;
-
-			for (direction in 0...justPressed.length)
-			{
-				if (justPressed[direction])
-					strum.pressNote(direction);
-				strum.updateKeyState(direction, held[direction]);
-			}
-		}
 	}
 
 	override function beatHit()

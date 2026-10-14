@@ -26,8 +26,8 @@ class FreeplayState extends MusicBeatState {
     public override function update(elapsed:Float) {
         super.update(elapsed);
 
-        if (FlxG.keys.justPressed.DOWN || FlxG.keys.justPressed.W) curSelected = FlxMath.wrap(curSelected + 1, 0, songObjects.members.length - 1);
-        if (FlxG.keys.justPressed.UP || FlxG.keys.justPressed.D) curSelected = FlxMath.wrap(curSelected - 1, 0, songObjects.members.length - 1);
+        if (FlxG.keys.justPressed.DOWN || FlxG.keys.justPressed.S) curSelected = FlxMath.wrap(curSelected + 1, 0, songObjects.members.length - 1);
+        if (FlxG.keys.justPressed.UP || FlxG.keys.justPressed.W) curSelected = FlxMath.wrap(curSelected - 1, 0, songObjects.members.length - 1);
         FlxG.camera.scroll.y = CoolUtil.coolLerp(songObjects.members[curSelected].y, FlxG.camera.scroll.y, 0.35, elapsed);
 
         if (FlxG.keys.justPressed.ENTER) {

@@ -1,17 +1,24 @@
 package funkin.states.game.objects;
 //TODO: make some type of note skin system, 
 
+import flixel.input.keyboard.FlxKey;
 import flixel.group.FlxSpriteGroup.FlxTypedSpriteGroup;
+import openfl.events.KeyboardEvent;
 
 class StrumLine extends FlxTypedSpriteGroup<FlxSprite> {
     var data:LineData;
     var chartIndex:Int = 0;
     var pendingNotes:Array<NoteData> = [];
     var nextNoteIndex:Int = 0;
-    public var isPlayerLine(default, null):Bool;
+    var notesByDirection:Array<Array<Note>> = [[], [], [], []];
+    public var isPlayerLine(default, null):Bool = false;
     public var notes:FlxTypedSpriteGroup<FlxSprite> = new FlxTypedSpriteGroup();
     public var characters:Array<Character> = [];
     var heldKeys:Array<Bool> = [false, false, false, false];
+    var physicalKeys:Array<Bool> = [false, false, false, false];
+    var inputEvents:Array<{direction:Int, isDown:Bool}> = [];
+    var keyDownHandler:KeyboardEvent->Void;
+    var keyUpHandler:KeyboardEvent->Void;
 
     public static var directionList:Array<String> = ["left", "down", "up", "right"];
     public static var seperation:Float = 120;
@@ -23,6 +30,14 @@ class StrumLine extends FlxTypedSpriteGroup<FlxSprite> {
         if (data != null) this.data = data;
         isPlayerLine = data != null && !data.cpu;
         this.chartIndex = chartIndex;
+
+        if (isPlayerLine) {
+            keyDownHandler = onKeyDown;
+            keyUpHandler = onKeyUp;
+            FlxG.stage.addEventListener(KeyboardEvent.KEY_DOWN, keyDownHandler);
+            FlxG.stage.addEventListener(KeyboardEvent.KEY_UP, keyUpHandler);
+            FlxG.signals.focusLost.add(onFocusLost);
+        }
 
         for (i in 0...4) {
             var direction:String = directionList[i];
@@ -39,41 +54,88 @@ class StrumLine extends FlxTypedSpriteGroup<FlxSprite> {
         });
     }
 
+    function onKeyDown(event:KeyboardEvent):Void
+    {
+        var direction:Int = directionFromKey(event.keyCode);
+        if (direction < 0 || physicalKeys[direction])
+            return;
+
+        physicalKeys[direction] = true;
+        inputEvents.push({direction: direction, isDown: true});
+    }
+
+    function onKeyUp(event:KeyboardEvent):Void
+    {
+        var direction:Int = directionFromKey(event.keyCode);
+        if (direction < 0 || !physicalKeys[direction])
+            return;
+
+        physicalKeys[direction] = false;
+        inputEvents.push({direction: direction, isDown: false});
+    }
+
+    function onFocusLost():Void
+    {
+        for (direction in 0...physicalKeys.length)
+        {
+            if (!physicalKeys[direction])
+                continue;
+
+            physicalKeys[direction] = false;
+            inputEvents.push({direction: direction, isDown: false});
+        }
+    }
+
+    function directionFromKey(keyCode:Int):Int
+    {
+        return switch (keyCode) {
+            case FlxKey.A: 0;
+            case FlxKey.S: 1;
+            case FlxKey.W: 2;
+            case FlxKey.D: 3;
+            default: -1;
+        };
+    }
+
     public function pressNote(direction:Int):Bool
     {
         if (!isPlayerLine || direction < 0 || direction >= directionList.length)
             return false;
 
         heldKeys[direction] = true;
-        var target:Note = null;
-        var closestDifference:Float = hitWindow + 1;
-
-        for (member in notes.members)
+        var directionNotes:Array<Note> = notesByDirection[direction];
+        while (directionNotes.length > 0)
         {
-            if (member == null || !Std.isOfType(member, Note))
-                continue;
-
-            var note:Note = cast member;
-            if (note.wasHit || note.noteData.direction != direction)
-                continue;
-
-            var difference:Float = Math.abs(Conductor.songPosition - note.noteData.time);
-            if (difference <= hitWindow && difference < closestDifference)
+            var target:Note = directionNotes[0];
+            var timeDifference:Float = Conductor.songPosition - target.noteData.time;
+            if (timeDifference > hitWindow)
             {
-                target = note;
-                closestDifference = difference;
+                removeNote(target);
+                continue;
             }
+
+            if (timeDifference < -hitWindow)
+                break;
+
+            hitNote(target, cast members[direction]);
+            return true;
         }
 
         var receptor:Strum = cast members[direction];
-        if (target == null)
+        receptor.playAnim("press", true);
+        return false;
+    }
+
+    override public function destroy():Void
+    {
+        if (isPlayerLine)
         {
-            receptor.playAnim("press", true);
-            return false;
+            FlxG.stage.removeEventListener(KeyboardEvent.KEY_DOWN, keyDownHandler);
+            FlxG.stage.removeEventListener(KeyboardEvent.KEY_UP, keyUpHandler);
+            FlxG.signals.focusLost.remove(onFocusLost);
         }
 
-        hitNote(target, receptor);
-        return true;
+        super.destroy();
     }
 
     public function updateKeyState(direction:Int, isHeld:Bool):Void
@@ -117,6 +179,7 @@ class StrumLine extends FlxTypedSpriteGroup<FlxSprite> {
 
     override public function update(elapsed:Float) {
         spawnNotes();
+        processInputEvents();
         super.update(elapsed);
 
         var i:Int = 0;
@@ -135,7 +198,7 @@ class StrumLine extends FlxTypedSpriteGroup<FlxSprite> {
             note.y = receptor.y - (Conductor.songPosition - note.noteData.time) * pixelsPerMs;
             var noteEndTime:Float = note.noteData.time + note.noteData.sustainLength;
 
-            if (!note.wasHit && data.cpu && Conductor.songPosition >= note.noteData.time) {
+            if (!note.wasHit && !isPlayerLine && Conductor.songPosition >= note.noteData.time) {
                 hitNote(note, receptor);
             }
 
@@ -175,9 +238,23 @@ class StrumLine extends FlxTypedSpriteGroup<FlxSprite> {
         updateHeldReceptors();
     }
 
+    function processInputEvents():Void
+    {
+        for (inputEvent in inputEvents)
+        {
+            if (inputEvent.isDown)
+                pressNote(inputEvent.direction);
+            else
+                updateKeyState(inputEvent.direction, false);
+        }
+
+        inputEvents.resize(0);
+    }
+
     function hitNote(note:Note, receptor:Strum):Void
     {
         note.wasHit = true;
+        notesByDirection[note.noteData.direction].remove(note);
         if (note.noteData.sustainLength > 0)
             receptor.beginSustainConfirm();
         receptor.playAnim("confirm", true);
@@ -193,6 +270,8 @@ class StrumLine extends FlxTypedSpriteGroup<FlxSprite> {
 
     function removeNote(note:Note):Void
     {
+        notesByDirection[note.noteData.direction].remove(note);
+
         if (note.sustainBody != null)
         {
             notes.remove(note.sustainBody);
@@ -228,8 +307,8 @@ class StrumLine extends FlxTypedSpriteGroup<FlxSprite> {
                 }
             }
 
-            if (!sustaining && receptor.animation.curAnim != null && receptor.animation.curAnim.name == "static")
-                receptor.playAnim("press", true);
+            // if (!sustaining && receptor.animation.curAnim != null && receptor.animation.curAnim.name == "static")
+            //     receptor.playAnim("press", true);
         }
     }
 
@@ -257,6 +336,7 @@ class StrumLine extends FlxTypedSpriteGroup<FlxSprite> {
                 notes.add(note.sustainEnd);
             }
             notes.add(note);
+            notesByDirection[noteData.direction].push(note);
             nextNoteIndex++;
         }
     }

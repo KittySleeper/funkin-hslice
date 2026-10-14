@@ -21,6 +21,11 @@ class Main extends Sprite
 
 		debugOverlay = new DebugOverlay();
 		addChild(debugOverlay);
+
+		FlxG.signals.preStateSwitch.add(() ->
+		{
+			Paths.dumpCache();
+		});
 	}
 
 	override function __enterFrame(delta:Float)
