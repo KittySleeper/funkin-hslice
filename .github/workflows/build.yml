@@ -1,3 +1,4 @@
+
 name: Build
 
 on:
@@ -11,6 +12,7 @@ permissions:
 jobs:
   windows:
     runs-on: windows-latest
+
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -20,8 +22,11 @@ jobs:
         with:
           haxe-version: 4.3.2
 
-      - name: Set up Lime
-        run: haxelib run lime setup -y
+      - name: Set up Haxelib and Lime
+        run: |
+          haxelib install lime 8.3.1 -y
+          haxelib run lime setup -y
+          haxelib set lime git -y
 
       - name: Build Windows target
         run: haxelib run lime build Project.xml windows
