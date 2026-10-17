@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xml>
+    <files id="__main__">
+		<compilerflag name="-I" value='${SYSTEM_HXSYSINFO_PATH}include/' if="windows" />
+		<compilerflag name="-I" value='${SYSTEM_HXSYSINFO_PATH}/include/' unless="windows" />
+	</files>
+
+    <files id="haxe">
+		<compilerflag name="-I" value='${SYSTEM_HXSYSINFO_PATH}include/' if="windows" />
+		<compilerflag name="-I" value='${SYSTEM_HXSYSINFO_PATH}/include/' unless="windows" />
+
+        <files id="sysinfo-all" />
+        <files id="sysinfo-windows" if="windows"/>
+        <files id="sysinfo-linux" if="linux"/>
+        <files id="sysinfo-mac" if="mac || macos"/>
+        <files id="sysinfo-ios" if="iphoneos || iphonesim"/>
+        <files id="sysinfo-android" if="android"/>
+	</files>
+
+    <files id="sysinfo-all">
+        <file name="${SYSTEM_HXSYSINFO_PATH}cpp/SysInfo.cpp" if="windows"/>
+        <file name="${SYSTEM_HXSYSINFO_PATH}/cpp/SysInfo.cpp" unless="windows"/>
+        <file name="${SYSTEM_HXSYSINFO_PATH}cpp/Converter.cpp" if="windows"/>
+        <file name="${SYSTEM_HXSYSINFO_PATH}/cpp/Converter.cpp" unless="windows"/>
+    </files>
+
+    <files id="sysinfo-windows" if="windows">
+        <file name="${SYSTEM_HXSYSINFO_PATH}cpp/SysInfo_Windows.cpp" />
+    </files>
+
+    <files id="sysinfo-linux" if="linux">
+        <file name="${SYSTEM_HXSYSINFO_PATH}/cpp/SysInfo_Linux.cpp" />
+    </files>
+
+    <files id="sysinfo-mac" if="mac || macos">
+        <file name="${SYSTEM_HXSYSINFO_PATH}/cpp/SysInfo_macOS.cpp" />
+    </files>
+
+    <files id="sysinfo-ios" if="iphoneos || iphonesim">
+        <file name="${SYSTEM_HXSYSINFO_PATH}/cpp/SysInfo_iOS.mm">
+            <compilerflag name="-fobjc-arc" />
+        </file>
+    </files>
+
+    <files id="sysinfo-android" if="android">
+        <file name="${SYSTEM_HXSYSINFO_PATH}/cpp/SysInfo_Android.cpp" />
+    </files>
+
+    <target id="haxe">
+        <lib name="dxgi.lib" if="windows" />
+        <lib name="advapi32.lib" if="windows"/>
+        <flag value="-framework" if="mac || macos" />
+        <flag value="IOKit" if="mac || macos" />
+        <flag value="-framework" if="mac || macos" />
+        <flag value="CoreFoundation" if="mac || macos" />
+        <framework name="UIKit" if="iphoneos || iphonesim" />
+        <framework name="Metal" if="iphoneos || iphonesim" />
+        <lib name="EGL" if="android" />
+        <lib name="GLESv2" if="android" />
+
+        <files id="sysinfo-all" />
+        <files id="sysinfo-windows" if="windows"/>
+        <files id="sysinfo-linux" if="linux"/>
+        <files id="sysinfo-mac" if="mac || macos"/>
+        <files id="sysinfo-ios" if="iphoneos || iphonesim"/>
+        <files id="sysinfo-android" if="android"/>
+    </target>
+</xml>
