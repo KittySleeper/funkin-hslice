@@ -3,6 +3,7 @@ package funkin.states.game.objects;
 class Strum extends FlxSprite
 {
 	public var animOffsets:Map<String, Array<Float>> = new Map<String, Array<Float>>();
+	public var isHeld:Bool = false;
 	var sustainConfirmCount:Int = 0;
 
 	public function new(x:Float, y:Float, direction:String)
@@ -41,7 +42,7 @@ class Strum extends FlxSprite
 	{
 		super.update(elapsed);
 
-		if (sustainConfirmCount == 0 && animation.curAnim != null && animation.curAnim.name == "confirm" && animation.curAnim.finished)
+		if (!isHeld && sustainConfirmCount == 0 && animation.curAnim != null && animation.curAnim.name == "confirm" && animation.curAnim.finished)
 			playAnim("static", true);
 	}
 

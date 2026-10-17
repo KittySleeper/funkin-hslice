@@ -9,8 +9,10 @@ class Conductor
 	public static var crochet:Float = ((60 / bpm) * 1000);
 	public static var stepCrochet:Float = crochet / 4;
 	public static var songPosition:Float = 0;
+	public static var visualSongPosition:Float = 0;
 	public static var lastSongPos:Float = 0;
 	public static var offset:Float = 0;
+	static var visualPositionInitialized:Bool = false;
 
 	public static var safeFrames:Int = 10;
 	public static var safeZoneOffset:Float = (safeFrames / 60) * 1000;
@@ -42,6 +44,22 @@ class Conductor
 
 		curStep = lastChange.stepTime + Math.floor((songPosition - lastChange.songTime) / stepCrochet);
 		curBeat = Math.floor(curStep / 4);
+	}
+
+	public static function updateVisualPosition(targetPosition:Float, elapsed:Float, isPlaying:Bool):Void
+	{
+		if (!visualPositionInitialized || !isPlaying || Math.abs(targetPosition - visualSongPosition) > 100)
+		{
+			visualSongPosition = targetPosition;
+			visualPositionInitialized = true;
+			return;
+		}
+
+		var frameAdvance:Float = elapsed * 1000;
+		var predictedPosition:Float = visualSongPosition + frameAdvance;
+		var clockError:Float = targetPosition - predictedPosition;
+		var maxCorrection:Float = frameAdvance * 0.15;
+		visualSongPosition = predictedPosition + FlxMath.bound(clockError, -maxCorrection, maxCorrection);
 	}
 
 	public static function mapBPMChanges(song:Chart):Void

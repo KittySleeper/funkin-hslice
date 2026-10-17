@@ -45,6 +45,8 @@
 	<haxedef name="hscriptPos" />
 	<haxelib name="flixel-animate"/>
 
+	<haxelib name="HxSysInfo"/>
+	
 	<!--In case you want to use nape with flixel-->
 	<!--<haxelib name="nape-haxe4" />-->
 

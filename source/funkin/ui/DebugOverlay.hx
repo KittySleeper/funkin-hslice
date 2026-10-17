@@ -16,6 +16,12 @@ import openfl.events.KeyboardEvent;
 import openfl.text.TextField;
 import openfl.text.TextFormat;
 
+import SysInfo;
+import SysInfo.Converter;
+#if (openfl && lime)
+import SysInfo.OpenFLSysInfo;
+#end
+
 enum abstract DebugStatDisplayMode(Int) from Int to Int
 {
 	final NONE = 0;
@@ -548,15 +554,7 @@ class DebugOverlay extends Sprite
 		}));
 		systemStats.addMetric(new StaticTextMetric("CPU: ", () ->
 		{
-			@:privateAccess
-			var proc = new Process("wmic", ["cpu", "get", "Name"]);
-			proc.stdout.readLine();
-			var output = proc.stdout.readLine();
-			if (output != null)
-				output = StringTools.trim(output);
-			else
-				output = "Unknown";
-			return output;
+			return SysInfo.getCPUName();
 		}));
 		systemStats.addMetric(new StaticTextMetric("OS: ", () ->
 		{

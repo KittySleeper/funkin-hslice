@@ -14,6 +14,7 @@ class StrumLine extends FlxTypedSpriteGroup<FlxSprite> {
     public var isPlayerLine(default, null):Bool = false;
     public var notes:FlxTypedSpriteGroup<FlxSprite> = new FlxTypedSpriteGroup();
     public var characters:Array<Character> = [];
+    public var onJudgement:RatingData->Void;
     var heldKeys:Array<Bool> = [false, false, false, false];
     var physicalKeys:Array<Bool> = [false, false, false, false];
     var inputEvents:Array<{direction:Int, isDown:Bool}> = [];
@@ -22,7 +23,29 @@ class StrumLine extends FlxTypedSpriteGroup<FlxSprite> {
 
     public static var directionList:Array<String> = ["left", "down", "up", "right"];
     public static var seperation:Float = 120;
-    public static var hitWindow:Float = 150;
+    public static var ratings:Array<RatingData> = [
+        {name: "sick", sprite: "sick", timingWindow: 45, accuracyWeight: 1, score: 350, health: 4},
+        {name: "good", sprite: "good", timingWindow: 90, accuracyWeight: 0.75, score: 200, health: 2},
+        {name: "bad", sprite: "bad", timingWindow: 135, accuracyWeight: 0.5, score: 100, health: -2},
+        {name: "shit", sprite: "shit", timingWindow: 150, accuracyWeight: 0.25, score: 50, health: -4}
+    ];
+    public static var missRating:RatingData = {
+        name: "miss",
+        sprite: "",
+        timingWindow: 0,
+        accuracyWeight: 0,
+        score: -150,
+        health: -4
+    };
+    public static var hitWindow(get, never):Float;
+
+    static function get_hitWindow():Float
+    {
+        var window:Float = 0;
+        for (rating in ratings)
+            window = Math.max(window, rating.timingWindow);
+        return window;
+    }
 
     override public function new(x:Float, y:Float, ?data:LineData, chartIndex:Int = 0) {
         super(x, y);
@@ -103,6 +126,7 @@ class StrumLine extends FlxTypedSpriteGroup<FlxSprite> {
             return false;
 
         heldKeys[direction] = true;
+        (cast members[direction] : Strum).isHeld = true;
         var directionNotes:Array<Note> = notesByDirection[direction];
         while (directionNotes.length > 0)
         {
@@ -110,6 +134,7 @@ class StrumLine extends FlxTypedSpriteGroup<FlxSprite> {
             var timeDifference:Float = Conductor.songPosition - target.noteData.time;
             if (timeDifference > hitWindow)
             {
+                registerJudgement(missRating);
                 removeNote(target);
                 continue;
             }
@@ -146,6 +171,8 @@ class StrumLine extends FlxTypedSpriteGroup<FlxSprite> {
         if (!isHeld && heldKeys[direction])
         {
             heldKeys[direction] = false;
+            var receptor:Strum = cast members[direction];
+            receptor.isHeld = false;
 
             var sustainNotes:Array<Note> = [];
             for (member in notes.members)
@@ -161,17 +188,17 @@ class StrumLine extends FlxTypedSpriteGroup<FlxSprite> {
 
             for (note in sustainNotes)
             {
-                var receptor:Strum = cast members[direction];
                 receptor.endSustainConfirm();
                 removeNote(note);
             }
 
-            (cast members[direction] : Strum).playAnim("static", true);
+            receptor.playAnim("static", true);
         }
         else if (isHeld)
         {
             heldKeys[direction] = true;
             var receptor:Strum = cast members[direction];
+            receptor.isHeld = true;
             if (receptor.animation.curAnim == null || receptor.animation.curAnim.name == "static")
                 receptor.playAnim("press", true);
         }
@@ -195,7 +222,7 @@ class StrumLine extends FlxTypedSpriteGroup<FlxSprite> {
             var receptor:Strum = cast members[note.noteData.direction];
 
             var pixelsPerMs:Float = 0.45 * FlxMath.roundDecimal(data.scrollSpeed, 2);
-            note.y = receptor.y - (Conductor.songPosition - note.noteData.time) * pixelsPerMs;
+            note.y = receptor.y - (Conductor.visualSongPosition - note.noteData.time) * pixelsPerMs;
             var noteEndTime:Float = note.noteData.time + note.noteData.sustainLength;
 
             if (!note.wasHit && !isPlayerLine && Conductor.songPosition >= note.noteData.time) {
@@ -203,11 +230,12 @@ class StrumLine extends FlxTypedSpriteGroup<FlxSprite> {
             }
 
             if (!note.wasHit && isPlayerLine && Conductor.songPosition > note.noteData.time + hitWindow) {
+                registerJudgement(missRating);
                 removeNote(note);
                 continue;
             }
 
-            note.updateSustain(pixelsPerMs, receptor.y + receptor.height * 0.5, Conductor.songPosition);
+            note.updateSustain(pixelsPerMs, receptor.y + receptor.height * 0.5, Conductor.visualSongPosition);
 
             if (note.wasHit && note.noteData.sustainLength > 0 && Conductor.songPosition < noteEndTime) {
                 if (isPlayerLine && !heldKeys[note.noteData.direction])
@@ -255,6 +283,12 @@ class StrumLine extends FlxTypedSpriteGroup<FlxSprite> {
     {
         note.wasHit = true;
         notesByDirection[note.noteData.direction].remove(note);
+        if (isPlayerLine)
+        {
+            var offset:Float = Conductor.songPosition - note.noteData.time;
+            registerJudgement(ratingForOffset(offset));
+        }
+
         if (note.noteData.sustainLength > 0)
             receptor.beginSustainConfirm();
         receptor.playAnim("confirm", true);
@@ -266,6 +300,21 @@ class StrumLine extends FlxTypedSpriteGroup<FlxSprite> {
             char.isSinging = true;
             char.holdTimer = 0;
         }
+    }
+
+    function ratingForOffset(offset:Float):RatingData
+    {
+        var absoluteOffset:Float = Math.abs(offset);
+        for (rating in ratings)
+            if (absoluteOffset <= rating.timingWindow)
+                return rating;
+        return missRating;
+    }
+
+    function registerJudgement(rating:RatingData):Void
+    {
+        if (isPlayerLine && onJudgement != null)
+            onJudgement(rating);
     }
 
     function removeNote(note:Note):Void
@@ -340,4 +389,14 @@ class StrumLine extends FlxTypedSpriteGroup<FlxSprite> {
             nextNoteIndex++;
         }
     }
+}
+
+typedef RatingData =
+{
+    var name:String;
+    var sprite:String;
+    var timingWindow:Float;
+    var accuracyWeight:Float;
+    var score:Int;
+    var health:Float;
 }

@@ -3,6 +3,8 @@ package funkin.states.game;
 import funkin.backend.HScript;
 import funkin.states.menus.freeplay.FreeplayState;
 import flixel.FlxObject;
+import flixel.tweens.FlxTween;
+import funkin.states.game.objects.StrumLine.RatingData;
 import funkin.states.game.objects.*;
 import flixel.group.FlxSpriteGroup.FlxTypedSpriteGroup;
 import openfl.desktop.ClipboardFormats;
@@ -25,6 +27,13 @@ class PlayState extends MusicBeatState
 	public var strumLines:FlxTypedSpriteGroup<StrumLine> = new FlxTypedSpriteGroup();
 	public var healthBarBG:FlxSprite;
 	public var healthBar:FlxBar;
+	public var score:Int = 0;
+	public var combo:Int = 0;
+	public var misses:Int = 0;
+	public var totalJudgedNotes:Int = 0;
+	public var totalAccuracyWeight:Float = 0;
+	public var accuracy:Float = 100;
+	public var scoreTxt:FlxText;
 
 	public var health:Float = 50;
 
@@ -92,6 +101,8 @@ class PlayState extends MusicBeatState
 		for (i => strumData in songData.strumLines)
 		{
 			var strum:StrumLine = new StrumLine(strumData.position[0], strumData.position[1], strumData, i);
+			if (strum.isPlayerLine)
+				strum.onJudgement = onPlayerJudgement;
 			strumLines.add(strum);
 
 			for (charName in strumData.characters)
@@ -110,7 +121,6 @@ class PlayState extends MusicBeatState
 		healthBarBG = new FlxSprite(0, FlxG.height * 0.9).loadGraphic(Paths.image('game/healthBar'));
 		healthBarBG.screenCenter(X);
 		healthBarBG.scrollFactor.set();
-		add(healthBarBG);
 
 		healthBar = new FlxBar(healthBarBG.x + 4, healthBarBG.y + 4, RIGHT_TO_LEFT, Std.int(healthBarBG.width - 8), Std.int(healthBarBG.height - 8), this,
 			'health', 0, 100);
@@ -118,7 +128,14 @@ class PlayState extends MusicBeatState
 		healthBar.createFilledBar(0xFFFF0000, 0xFF66FF33);
 		add(healthBar);
 
-		for (obj in [healthBarBG, healthBar, strumLines])
+		add(healthBarBG);
+
+		scoreTxt = new FlxText(0, healthBarBG.y + 35, FlxG.width, "");
+		scoreTxt.setFormat(Paths.font("vcr"), 20, FlxColor.WHITE, CENTER, OUTLINE, FlxColor.BLACK);
+		updatescoreTxt();
+		add(scoreTxt);
+
+		for (obj in [healthBarBG, healthBar, scoreTxt, strumLines])
 			obj.camera = camHUD;
 
 		stage.addObjects();
@@ -168,6 +185,109 @@ class PlayState extends MusicBeatState
 		super.update(elapsed);
 
 		callScriptFunction("updatePost", [elapsed]);
+	}
+
+	function onPlayerJudgement(rating:RatingData):Void
+	{
+		totalJudgedNotes++;
+		totalAccuracyWeight += rating.accuracyWeight;
+
+		if (rating.name == "miss")
+		{
+			combo = 0;
+			health += rating.health;
+			misses++;
+		}
+		else
+		{
+			combo++;
+			score += rating.score;
+			if (health <= healthBar.max)
+				health += rating.health;
+		}
+
+		accuracy = totalAccuracyWeight / totalJudgedNotes * 100;
+		updatescoreTxt();
+		showRating(rating);
+	}
+
+	function updatescoreTxt():Void
+	{
+		scoreTxt.text = 'Score: $score • Misses: $misses • Accuracy: ${FlxMath.roundDecimal(accuracy, 2)}%';
+	}
+
+	function showRating(rating:RatingData):Void
+	{
+		if (rating.name == "miss" || rating.sprite == "")
+			return;
+
+		var ratingSprite:FlxSprite = new FlxSprite();
+		ratingSprite.loadGraphic(Paths.image('game/ratings/${rating.sprite}'));
+		ratingSprite.setGraphicSize(Std.int(ratingSprite.width * 0.7));
+		ratingSprite.updateHitbox();
+		ratingSprite.screenCenter(X);
+		ratingSprite.y = FlxG.height * 0.4;
+		showPopup(ratingSprite);
+		showCombo(combo, ratingSprite.y + ratingSprite.height);
+	}
+
+	function showCombo(comboCount:Int, y:Float):Void
+	{
+		var digitY:Float = y;
+
+		if (comboCount >= 10)
+		{
+			var comboSprite:FlxSprite = new FlxSprite();
+			comboSprite.loadGraphic(Paths.image("game/ratings/combo"));
+			comboSprite.setGraphicSize(Std.int(comboSprite.width * 0.62));
+			comboSprite.updateHitbox();
+			comboSprite.screenCenter(X);
+			comboSprite.y = y;
+			showPopup(comboSprite);
+			digitY += comboSprite.height + 5;
+		}
+
+		var comboString:String = Std.string(comboCount);
+		while (comboString.length < 3)
+			comboString = '0$comboString';
+
+		var digits:Array<FlxSprite> = [];
+		var totalWidth:Float = 0;
+		for (digit in comboString.split(""))
+		{
+			var digitSprite:FlxSprite = new FlxSprite();
+			digitSprite.loadGraphic(Paths.image('game/ratings/num$digit'));
+			digitSprite.setGraphicSize(Std.int(digitSprite.width * 0.65));
+			digitSprite.updateHitbox();
+			digits.push(digitSprite);
+			totalWidth += digitSprite.width;
+		}
+
+		var spacing:Float = 1.65;
+		totalWidth += spacing * (digits.length - 1);
+		var digitX:Float = (FlxG.width - totalWidth) * 0.5;
+		for (digitSprite in digits)
+		{
+			digitSprite.x = digitX;
+			digitSprite.y = digitY;
+			digitX += digitSprite.width + spacing;
+			showPopup(digitSprite);
+		}
+	}
+
+	function showPopup(popup:FlxSprite):Void
+	{
+		popup.camera = camHUD;
+		popup.velocity.y = -140;
+		popup.acceleration.y = 550;
+		add(popup);
+		FlxTween.tween(popup, {alpha: 0}, 0.2, {
+			startDelay: 0.2,
+			onComplete: function(_) {
+				remove(popup);
+				popup.destroy();
+			}
+		});
 	}
 
 	override function beatHit()

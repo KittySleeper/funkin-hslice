@@ -41,9 +41,15 @@ class MusicBeatState extends FlxState
 	override public function update(elapsed:Float)
 	{
 		if (FlxG.sound.music != null)
+		{
 			Conductor.songPosition = FlxG.sound.music.time;
+			Conductor.updateVisualPosition(Conductor.songPosition, elapsed, FlxG.sound.music.playing);
+		}
 		else
+		{
 			Conductor.songPosition = 0;
+			Conductor.updateVisualPosition(0, elapsed, false);
+		}
 
 		var oldStep:Int = curStep;
 		Conductor.update();

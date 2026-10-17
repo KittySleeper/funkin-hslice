@@ -11,6 +11,7 @@ class FunkinSoundTray extends FlxSoundTray {
     public static final GRAPHIC_SCALE:Float = 0.3;
 
     public var barBitmapDatas:Map<Int, BitmapData> = [];
+    var ownedBitmapDatas:Array<BitmapData> = [];
 
     public var trayContainer:Sprite;
     public var barDisplay:Bitmap;
@@ -25,7 +26,7 @@ class FunkinSoundTray extends FlxSoundTray {
 
     public function new() {
         super();
-        FlxG.signals.postStateSwitch.addOnce(create);
+        create();
     }
 
     private function create():Void {
@@ -34,12 +35,12 @@ class FunkinSoundTray extends FlxSoundTray {
         trayContainer = new Sprite();
         addChild(trayContainer);
 
-        final bg:Bitmap = new Bitmap(Paths.image("soundtray/volumebox").bitmap);
+        final bg:Bitmap = new Bitmap(loadTrayBitmap("soundtray/volumebox"));
         bg.smoothing = true;
         bg.scaleX = bg.scaleY = GRAPHIC_SCALE;
         trayContainer.addChild(bg);
 
-        final backingBar:Bitmap = new Bitmap(Paths.image("soundtray/bars_10").bitmap);
+        final backingBar:Bitmap = new Bitmap(loadTrayBitmap("soundtray/bars_10"));
         backingBar.x = 9;
         backingBar.y = 5;
         backingBar.smoothing = true;
@@ -47,7 +48,7 @@ class FunkinSoundTray extends FlxSoundTray {
         backingBar.scaleX = backingBar.scaleY = GRAPHIC_SCALE;
         trayContainer.addChild(backingBar);
 
-        barDisplay = new Bitmap(Paths.image("soundtray/bars_10").bitmap);
+        barDisplay = new Bitmap(loadTrayBitmap("soundtray/bars_10"));
         barDisplay.x = 9;
         barDisplay.y = 5;
         barDisplay.smoothing = true;
@@ -56,7 +57,7 @@ class FunkinSoundTray extends FlxSoundTray {
 
         _bars = [];
         for(i in 1...11)
-            barBitmapDatas.set(i, Paths.image("soundtray/bars_" + i).bitmap);
+            barBitmapDatas.set(i, loadTrayBitmap("soundtray/bars_" + i));
 
         y = -88;
         visible = false;
@@ -67,15 +68,19 @@ class FunkinSoundTray extends FlxSoundTray {
         volumeMaxSound = "assets/sounds/soundtray/max.ogg";
     }
 
+    function loadTrayBitmap(key:String):BitmapData
+    {
+        var bitmapData:BitmapData = Paths.image(key).bitmap.clone();
+        ownedBitmapDatas.push(bitmapData);
+        return bitmapData;
+    }
+
     public function destroy():Void {
-        for(bmp in barBitmapDatas) {
-            @:privateAccess {
-                if(bmp.__texture != null)
-                    bmp.__texture.dispose();
-            }
+        for(bmp in ownedBitmapDatas) {
             bmp.disposeImage();
             bmp.dispose();
         }
+        ownedBitmapDatas = null;
         barBitmapDatas = null;
     }
 
@@ -88,10 +93,8 @@ class FunkinSoundTray extends FlxSoundTray {
 
         alpha = FlxMath.lerp(alpha, alphaTarget, Math.min(FlxMath.getElapsedLerp(0.25, MS / 1000), 1));
 
-        final shouldHide:Bool = (FlxG.sound.muted == false && FlxG.sound.volume > 0);
         if(_timer > 0) {
-            if(shouldHide)
-                _timer -= (MS / 1000);
+            _timer = Math.max(0, _timer - MS / 1000);
 
             if(_shakeMult > 0) {
                 trayContainer.x = FlxG.random.float(-2, 2) * _shakeMult;
@@ -113,7 +116,7 @@ class FunkinSoundTray extends FlxSoundTray {
             alphaTarget = 0;
             trayContainer.x = trayContainer.y = 0;
         }
-        if(Math.floor(y) <= -88) {
+        if(_timer <= 0 && Math.floor(y) <= -88) {
             y = -88;
 
             visible = false;
@@ -138,12 +141,13 @@ class FunkinSoundTray extends FlxSoundTray {
     override function showAnim(volume:Float, ?sound:FlxSoundAsset, duration = 1.0, label = "VOLUME"):Void {
         _timer = duration;
         lerpYPos = 10;
+        alphaTarget = 1;
 
         visible = true;
         active = true;
 
         var globalVolume:Int = FlxG.sound.muted || FlxG.sound.volume == 0 ? 0 : Math.round(FlxG.sound.logToLinear(FlxG.sound.volume) * 10);
-        if(!silent)
+        if(!silent && sound != null)
             FlxG.sound.play(sound);
 
         if(globalVolume != 0) {
