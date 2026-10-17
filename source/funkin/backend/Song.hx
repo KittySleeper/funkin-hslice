@@ -3,7 +3,7 @@ package funkin.backend;
 class Song
 {
 	/**
-	 * Loads a chart and converts V-Slice, Psych, and legacy charts.
+	 * Loads a chart and converts Codename Engine, V-Slice, Psych, and legacy charts.
 	 * @param songName String (The Name Of The Song)
 	 * @param songDifficulty String (The Difficulty Of The Song)
 	 * @return Chart
@@ -129,8 +129,158 @@ class Song
 					}
 				}
 			}
-		}
-		else if (songJson.song != null)
+		} else if (songJson.codenameChart == true) { // Codename/CNE Charts
+			var metadata:Dynamic = songJson.meta;
+			if (metadata == null || metadata.bpm == null || metadata.bpm <= 0)
+			{
+				var metadataPaths:Array<String> = [
+					'songs/$songName/data/meta'
+				];
+				for (metadataPath in metadataPaths)
+				{
+					if (Paths.exists('$metadataPath.json'))
+					{
+						metadata = Paths.json(metadataPath);
+						if (metadata != null && metadata.bpm != null && metadata.bpm > 0)
+							break;
+					}
+				}
+			}
+			if (metadata == null || metadata.bpm == null || metadata.bpm <= 0)
+				throw 'Codename Engine chart for "$songName" is missing a valid metadata BPM. Expected bpm in chart meta or songs/$songName/meta.json.';
+			if (!Std.isOfType(songJson.strumLines, Array) || songJson.strumLines.length == 0)
+				throw 'Codename Engine chart for "$songName" is missing strum lines.';
+
+			finalChart.format = "Codename Engine";
+			finalChart.bpm = metadata.bpm;
+			finalChart.stage = songJson.stage != null ? songJson.stage : "";
+
+			var chartScrollSpeed:Float = songJson.scrollSpeed != null ? songJson.scrollSpeed : 1;
+			if (songJson.noteTypes != null && !Std.isOfType(songJson.noteTypes, Array))
+				throw 'Codename Engine chart for "$songName" has an invalid note types list.';
+			var noteTypes:Array<Dynamic> = songJson.noteTypes != null ? cast songJson.noteTypes : [];
+			var sourceStrumLines:Array<Dynamic> = cast songJson.strumLines;
+			finalChart.strumLines = [];
+
+			for (sourceLine in sourceStrumLines)
+			{
+				if (sourceLine == null || sourceLine.type == null || !Std.isOfType(sourceLine.notes, Array))
+					throw 'Codename Engine chart for "$songName" contains an invalid strum line.';
+				if (sourceLine.characters != null && !Std.isOfType(sourceLine.characters, Array))
+					throw 'Codename Engine chart for "$songName" contains an invalid character list.';
+
+				var cpu:Bool;
+				var defaultCharacterPosition:String;
+				switch Std.int(sourceLine.type)
+				{
+					case 0:
+						cpu = true;
+						defaultCharacterPosition = "opponent";
+					case 1:
+						cpu = false;
+						defaultCharacterPosition = "player";
+					case 2:
+						cpu = true;
+						defaultCharacterPosition = "opponent";
+					default:
+						throw 'Codename Engine chart for "$songName" contains unsupported strum line type ${sourceLine.type}.';
+				}
+
+				var sourceCharacterPosition:String = sourceLine.position;
+				var characterPosition:String = sourceCharacterPosition == "player" || sourceCharacterPosition == "opponent"
+					? sourceCharacterPosition : defaultCharacterPosition;
+				var line:LineData = {
+					notes: [],
+					cpu: cpu,
+					position: [cpu ? 50 : 690, 50],
+					characters: sourceLine.characters != null ? cast sourceLine.characters : [],
+					charPosition: characterPosition,
+					scrollSpeed: sourceLine.scrollSpeed != null ? sourceLine.scrollSpeed : chartScrollSpeed
+				};
+
+				for (sourceNote in (cast sourceLine.notes : Array<Dynamic>))
+				{
+					if (sourceNote == null || sourceNote.time == null || sourceNote.id == null)
+						throw 'Codename Engine chart for "$songName" contains an invalid note.';
+
+					var direction:Int = Std.int(sourceNote.id);
+					if (direction < 0 || direction > 3)
+						throw 'Codename Engine chart for "$songName" uses unsupported lane $direction; this game supports four lanes.';
+
+					var noteType:String = "default";
+					var noteTypeIndex:Int = sourceNote.type != null ? Std.int(sourceNote.type) : 0;
+					if (noteTypeIndex < 0)
+						throw 'Codename Engine chart for "$songName" contains invalid note type $noteTypeIndex.';
+					if (noteTypeIndex > 0)
+					{
+						if (noteTypeIndex > noteTypes.length)
+							throw 'Codename Engine chart for "$songName" references missing note type $noteTypeIndex.';
+						noteType = noteTypes[noteTypeIndex - 1];
+					}
+
+					line.notes.push({
+						time: sourceNote.time,
+						direction: direction,
+						sustainLength: sourceNote.sLen != null ? sourceNote.sLen : 0,
+						type: noteType
+					});
+				}
+
+				finalChart.strumLines.push(line);
+			}
+
+			if (songJson.events != null)
+			{
+				if (!Std.isOfType(songJson.events, Array))
+					throw 'Codename Engine chart for "$songName" has an invalid events list.';
+
+				for (sourceEvent in (cast songJson.events : Array<Dynamic>))
+				{
+					if (sourceEvent == null || sourceEvent.time == null || sourceEvent.name == null)
+						throw 'Codename Engine chart for "$songName" contains an invalid event.';
+
+					if (sourceEvent.params != null && !Std.isOfType(sourceEvent.params, Array))
+						throw 'Codename Engine chart for "$songName" contains an invalid event parameter list.';
+					var params:Array<Dynamic> = sourceEvent.params != null ? cast sourceEvent.params : [];
+					switch sourceEvent.name
+					{
+						case "Camera Movement":
+							if (params.length > 0)
+								finalChart.events.push({
+									time: sourceEvent.time,
+									name: "Camera Target",
+									values: [params[0], "Classic"]
+								});
+						case "FocusCamera":
+							if (params.length > 0)
+								finalChart.events.push({
+									time: sourceEvent.time,
+									name: "Camera Target",
+									values: [params[0], "Classic"]
+								});
+						case "SetCameraBop":
+							if (params.length >= 2)
+								finalChart.events.push({
+									time: sourceEvent.time,
+									name: "Camera Beat Interval Change",
+									values: [params[0], params[1]]
+								});
+							else
+								finalChart.events.push({
+									time: sourceEvent.time,
+									name: sourceEvent.name,
+									values: params
+								});
+						default:
+							finalChart.events.push({
+								time: sourceEvent.time,
+								name: sourceEvent.name,
+								values: params
+							});
+					}
+				}
+			}
+		} else if (songJson.song != null)
 		{ // Psych / Legacy
 			songJson = songJson.song;
 

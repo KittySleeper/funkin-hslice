@@ -103,7 +103,7 @@ class Main extends Sprite
 		boxMessage += '\nCall stack was saved as ${fileName}';
 		File.saveContent(fileName, callstack);
 		#end
-		boxMessage += '\nPlease report this to the git repo:\nhttps://git.gay/AnimusTeam/gbPsych\n\n';
+		boxMessage += '\nPlease report this to the git repo:\nhttps://github.com/KittySleeper/better-than-vslice\n\n';
 		boxMessage += "\nWould you like to go to the main menu?";
 
 		if (FlxG.stage?.window != null)

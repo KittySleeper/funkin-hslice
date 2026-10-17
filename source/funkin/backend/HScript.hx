@@ -67,6 +67,12 @@ class HScript extends Iris {
         }
     }
 
+    override public function call(fun:String, ?args:Array<Dynamic>)
+        if (exists(fun))
+            return super.call(fun, args);
+        else
+            return null;
+
     public function syncParentFields():Void {
         for (field in parentFields)
         {

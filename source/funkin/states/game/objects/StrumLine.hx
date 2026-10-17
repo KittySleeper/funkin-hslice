@@ -11,6 +11,9 @@ class StrumLine extends FlxTypedSpriteGroup<FlxSprite> {
     var pendingNotes:Array<NoteData> = [];
     var nextNoteIndex:Int = 0;
     var notesByDirection:Array<Array<Note>> = [[], [], [], []];
+    var activeSplashes:Array<NoteSplash> = [];
+    var activeSustainCovers:Array<SustainCover> = [];
+    var sustainCoversByDirection:Array<SustainCover> = [null, null, null, null];
     public var isPlayerLine(default, null):Bool = false;
     public var notes:FlxTypedSpriteGroup<FlxSprite> = new FlxTypedSpriteGroup();
     public var characters:Array<Character> = [];
@@ -24,10 +27,10 @@ class StrumLine extends FlxTypedSpriteGroup<FlxSprite> {
     public static var directionList:Array<String> = ["left", "down", "up", "right"];
     public static var seperation:Float = 120;
     public static var ratings:Array<RatingData> = [
-        {name: "sick", sprite: "sick", timingWindow: 45, accuracyWeight: 1, score: 350, health: 4},
-        {name: "good", sprite: "good", timingWindow: 90, accuracyWeight: 0.75, score: 200, health: 2},
-        {name: "bad", sprite: "bad", timingWindow: 135, accuracyWeight: 0.5, score: 100, health: -2},
-        {name: "shit", sprite: "shit", timingWindow: 150, accuracyWeight: 0.25, score: 50, health: -4}
+        {name: "sick", sprite: "sick", timingWindow: 45, accuracyWeight: 1, score: 350, health: 4, shouldSplash: true},
+        {name: "good", sprite: "good", timingWindow: 90, accuracyWeight: 0.75, score: 200, health: 2, shouldSplash: false},
+        {name: "bad", sprite: "bad", timingWindow: 135, accuracyWeight: 0.5, score: 100, health: -2, shouldSplash: false},
+        {name: "shit", sprite: "shit", timingWindow: 150, accuracyWeight: 0.25, score: 50, health: -4, shouldSplash: false}
     ];
     public static var missRating:RatingData = {
         name: "miss",
@@ -35,7 +38,8 @@ class StrumLine extends FlxTypedSpriteGroup<FlxSprite> {
         timingWindow: 0,
         accuracyWeight: 0,
         score: -150,
-        health: -4
+        health: -4,
+        shouldSplash: false
     };
     public static var hitWindow(get, never):Float;
 
@@ -192,6 +196,7 @@ class StrumLine extends FlxTypedSpriteGroup<FlxSprite> {
                 removeNote(note);
             }
 
+            stopSustainCover(direction);
             receptor.playAnim("static", true);
         }
         else if (isHeld)
@@ -208,6 +213,8 @@ class StrumLine extends FlxTypedSpriteGroup<FlxSprite> {
         spawnNotes();
         processInputEvents();
         super.update(elapsed);
+        cleanupFinishedSplashes();
+        cleanupFinishedSustainCovers();
 
         var i:Int = 0;
 
@@ -242,6 +249,7 @@ class StrumLine extends FlxTypedSpriteGroup<FlxSprite> {
                 {
                     receptor.endSustainConfirm();
                     removeNote(note);
+                    stopSustainCover(note.noteData.direction);
                     continue;
                 }
 
@@ -253,7 +261,15 @@ class StrumLine extends FlxTypedSpriteGroup<FlxSprite> {
 
             if (note.wasHit && Conductor.songPosition >= noteEndTime) {
                 if (note.noteData.sustainLength > 0)
+                {
                     receptor.endSustainConfirm();
+                    var direction:Int = note.noteData.direction;
+                    removeNote(note);
+                    if (!hasActiveSustain(direction))
+                        stopSustainCover(direction);
+                    i++;
+                    continue;
+                }
                 removeNote(note);
                 i++;
                 continue;
@@ -286,11 +302,17 @@ class StrumLine extends FlxTypedSpriteGroup<FlxSprite> {
         if (isPlayerLine)
         {
             var offset:Float = Conductor.songPosition - note.noteData.time;
-            registerJudgement(ratingForOffset(offset));
+            var rating:RatingData = ratingForOffset(offset);
+            registerJudgement(rating);
+            if (rating.shouldSplash)
+                showNoteSplash(receptor, note.noteData.direction);
         }
 
         if (note.noteData.sustainLength > 0)
+        {
             receptor.beginSustainConfirm();
+            startSustainCover(receptor, note.noteData.direction);
+        }
         receptor.playAnim("confirm", true);
 
         var animationName:String = 'sing${directionList[note.noteData.direction].toUpperCase()}';
@@ -300,6 +322,86 @@ class StrumLine extends FlxTypedSpriteGroup<FlxSprite> {
             char.isSinging = true;
             char.holdTimer = 0;
         }
+    }
+
+    function showNoteSplash(receptor:Strum, direction:Int):Void
+    {
+        var splash:NoteSplash = new NoteSplash(0, 0, direction);
+        splash.x = receptor.x - x + (receptor.width - splash.width) * 0.5;
+        splash.y = receptor.y - y + (receptor.height - splash.height) * 0.5;
+        activeSplashes.push(splash);
+        add(splash);
+    }
+
+    function cleanupFinishedSplashes():Void
+    {
+        var i:Int = activeSplashes.length - 1;
+        while (i >= 0)
+        {
+            var splash:NoteSplash = activeSplashes[i];
+            if (!splash.alive || splash.isFinished)
+            {
+                activeSplashes.splice(i, 1);
+                remove(splash, true);
+                splash.destroy();
+            }
+            i--;
+        }
+    }
+
+    function startSustainCover(receptor:Strum, direction:Int):Void
+    {
+        var currentCover:SustainCover = sustainCoversByDirection[direction];
+        if (currentCover != null && currentCover.alive && !currentCover.isEnding)
+            return;
+
+        var cover:SustainCover = new SustainCover(0, 0, direction);
+        sustainCoversByDirection[direction] = cover;
+        activeSustainCovers.push(cover);
+        add(cover);
+        cover.centerOn(receptor.x + receptor.width * 0.5, receptor.y + receptor.height * 0.5);
+    }
+
+    function stopSustainCover(direction:Int):Void
+    {
+        var cover:SustainCover = sustainCoversByDirection[direction];
+        if (cover == null)
+            return;
+
+        sustainCoversByDirection[direction] = null;
+        cover.finish();
+    }
+
+    function cleanupFinishedSustainCovers():Void
+    {
+        var i:Int = activeSustainCovers.length - 1;
+        while (i >= 0)
+        {
+            var cover:SustainCover = activeSustainCovers[i];
+            if (!cover.alive || cover.isFinished)
+            {
+                activeSustainCovers.splice(i, 1);
+                remove(cover, true);
+                cover.destroy();
+            }
+            i--;
+        }
+    }
+
+    function hasActiveSustain(direction:Int):Bool
+    {
+        for (member in notes.members)
+        {
+            if (member == null || !Std.isOfType(member, Note))
+                continue;
+
+            var note:Note = cast member;
+            if (note.wasHit && note.noteData.direction == direction && note.noteData.sustainLength > 0
+                && Conductor.songPosition < note.noteData.time + note.noteData.sustainLength)
+                return true;
+        }
+
+        return false;
     }
 
     function ratingForOffset(offset:Float):RatingData
@@ -399,4 +501,5 @@ typedef RatingData =
     var accuracyWeight:Float;
     var score:Int;
     var health:Float;
+    var shouldSplash:Bool;
 }

@@ -43,8 +43,7 @@ class Stage {
                 script.set("add", container.add);
                 script.set("remove", container.remove);
                 script.set("insert", container.insert);
-                script.set("addObjects", addObjects);
-                script.set("getCharacterData", getCharacterData);
+                script.set("this", this);
                 if (script.exists("create"))
                     script.call("create");
                 state.haxescripts.push(script);

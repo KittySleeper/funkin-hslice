@@ -1,5 +1,6 @@
 package funkin.states.game.objects;
 
+import funkin.backend.HScript;
 import animate.FlxAnimate;
 
 class Character extends FlxAnimate
@@ -27,6 +28,8 @@ class Character extends FlxAnimate
 		antialiasing: true,
 		format: "HSlice Format"
 	};
+
+	public var charScripts:Array<HScript> = [];
 
 	override public function new(x:Float, y:Float, characterName:String = "bf", isPlayer:Bool = false)
 	{
@@ -122,6 +125,28 @@ class Character extends FlxAnimate
 
 		setGraphicSize(frameWidth * characterData.scale);
 		updateHitbox();
+
+		for (scriptName in Paths.readDirectory('characters/$characterName/scripts'))
+		{
+			var scriptType:String = "";
+
+			for (fileType in HScript.supportedFileTypes)
+			{
+				if (scriptName.endsWith('.$fileType'))
+					scriptType = "haxe";
+			}
+
+			if (scriptType == "haxe") {
+                var state:MusicBeatState = cast(FlxG.state, MusicBeatState);
+
+				var script:HScript = state.createHScript('characters/$characterName/scripts/$scriptName', false, false);
+                script.set("this", this);
+                if (script.exists("create"))
+                    script.call("create");
+                state.haxescripts.push(script);
+                charScripts.push(script);
+            }
+		}
 	}
 
 	override public function update(elapsed:Float)
@@ -147,14 +172,20 @@ class Character extends FlxAnimate
 			return;
 		animation.play(name, forced, reversed);
 		offset.set(animOffsets.get(name)[0], animOffsets.get(name)[1]);
+
+		for (script in charScripts)
+			script.call("playAnim", [name, forced, reversed]);
 	}
 
 	public var danceStep:Int = 0;
 
-	public function dance(forced:Bool = true)
+	public function dance(forced:Bool = false)
 	{
 		danceStep = Std.int(FlxMath.bound(danceStep++, 0, characterData.danceSteps.length - 1));
-		playAnim(characterData.danceSteps[danceStep]);
+		playAnim(characterData.danceSteps[danceStep], forced);
+
+		for (script in charScripts)
+			script.call("dance", [forced]);
 	}
 }
 

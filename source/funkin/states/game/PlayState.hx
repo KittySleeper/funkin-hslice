@@ -24,9 +24,24 @@ class PlayState extends MusicBeatState
 
 	public var stage:Stage;
 
+	public var dad(get, never):Character;
+
+	private function get_dad():Character
+		return strumLines.members[0].characters[0];
+
+	public var boyfriend(get, never):Character;
+
+	private function get_boyfriend():Character
+		return strumLines.members[1].characters[0];
+
+	public var ratingGroup:FlxTypedSpriteGroup<FlxSprite> = new FlxTypedSpriteGroup();
+
 	public var strumLines:FlxTypedSpriteGroup<StrumLine> = new FlxTypedSpriteGroup();
 	public var healthBarBG:FlxSprite;
 	public var healthBar:FlxBar;
+	public var iconP1:HealthIcon;
+	public var iconP2:HealthIcon;
+
 	public var score:Int = 0;
 	public var combo:Int = 0;
 	public var misses:Int = 0;
@@ -96,6 +111,7 @@ class PlayState extends MusicBeatState
 				createHScript('songs/$curSong/scripts/$scriptName');
 		}
 
+		add(ratingGroup);
 		add(strumLines);
 
 		for (i => strumData in songData.strumLines)
@@ -108,7 +124,6 @@ class PlayState extends MusicBeatState
 			for (charName in strumData.characters)
 			{ // maybe make it so that Characters are handled by strumline???
 				var charStageData:Stage.StageCharacterData = stage.getCharacterData(strumData.charPosition);
-				trace(charStageData);
 
 				var char:Character = new Character(charStageData.position[0], charStageData.position[1], charName, strumData.charPosition == "player");
 				char.characterData.cameraOffset[0] += charStageData.cameraOffset[0];
@@ -125,17 +140,25 @@ class PlayState extends MusicBeatState
 		healthBar = new FlxBar(healthBarBG.x + 4, healthBarBG.y + 4, RIGHT_TO_LEFT, Std.int(healthBarBG.width - 8), Std.int(healthBarBG.height - 8), this,
 			'health', 0, 100);
 		healthBar.scrollFactor.set();
-		healthBar.createFilledBar(0xFFFF0000, 0xFF66FF33);
+		healthBar.createFilledBar(FlxColor.fromString(dad.characterData.healthColor), FlxColor.fromString(boyfriend.characterData.healthColor));
 		add(healthBar);
 
 		add(healthBarBG);
+
+		iconP1 = new HealthIcon(0, 0, boyfriend.characterName, true);
+		iconP1.updateHitbox();
+		add(iconP1);
+
+		iconP2 = new HealthIcon(0, 0, dad.characterName);
+		iconP2.updateHitbox();
+		add(iconP2);
 
 		scoreTxt = new FlxText(0, healthBarBG.y + 35, FlxG.width, "");
 		scoreTxt.setFormat(Paths.font("vcr"), 20, FlxColor.WHITE, CENTER, OUTLINE, FlxColor.BLACK);
 		updatescoreTxt();
 		add(scoreTxt);
 
-		for (obj in [healthBarBG, healthBar, scoreTxt, strumLines])
+		for (obj in [ratingGroup, healthBarBG, healthBar, iconP1, iconP2, scoreTxt, strumLines])
 			obj.camera = camHUD;
 
 		stage.addObjects();
@@ -182,9 +205,22 @@ class PlayState extends MusicBeatState
 		camGame.zoom = CoolUtil.coolLerp(gameDefaultZoom, camGame.zoom, 0.95, elapsed);
 		camHUD.zoom = CoolUtil.coolLerp(hudDefaultZoom, camHUD.zoom, 0.95, elapsed);
 
+		iconP1.health = healthBar.percent;
+		iconP2.health = healthBar.percent;
+		positionHealthIcons();
+
 		super.update(elapsed);
 
 		callScriptFunction("updatePost", [elapsed]);
+	}
+
+	function positionHealthIcons():Void
+	{
+		var healthPoint:Float = healthBar.x + healthBar.width * (1 - FlxMath.bound(healthBar.percent / 100, 0, 1));
+		var iconOverlap:Float = 25;
+		
+		iconP2.setPosition(healthPoint - iconP2.width + iconOverlap, healthBar.y + (healthBar.height - iconP2.frameHeight) * 0.5);
+		iconP1.setPosition(healthPoint - iconOverlap, healthBar.y + (healthBar.height - iconP1.frameHeight) * 0.5);
 	}
 
 	function onPlayerJudgement(rating:RatingData):Void
@@ -195,16 +231,14 @@ class PlayState extends MusicBeatState
 		if (rating.name == "miss")
 		{
 			combo = 0;
-			health += rating.health;
 			misses++;
 		}
 		else
 		{
 			combo++;
 			score += rating.score;
-			if (health <= healthBar.max)
-				health += rating.health;
 		}
+		health = FlxMath.bound(health + rating.health, 0, 100);
 
 		accuracy = totalAccuracyWeight / totalJudgedNotes * 100;
 		updatescoreTxt();
@@ -220,6 +254,12 @@ class PlayState extends MusicBeatState
 	{
 		if (rating.name == "miss" || rating.sprite == "")
 			return;
+
+		if (!ratingGroup.members.isEmpty())
+			for (rating in ratingGroup.members)
+				rating.kill();
+		
+		ratingGroup.clear();
 
 		var ratingSprite:FlxSprite = new FlxSprite();
 		ratingSprite.loadGraphic(Paths.image('game/ratings/${rating.sprite}'));
@@ -277,15 +317,13 @@ class PlayState extends MusicBeatState
 
 	function showPopup(popup:FlxSprite):Void
 	{
-		popup.camera = camHUD;
 		popup.velocity.y = -140;
 		popup.acceleration.y = 550;
-		add(popup);
+		ratingGroup.add(popup);
 		FlxTween.tween(popup, {alpha: 0}, 0.2, {
 			startDelay: 0.2,
 			onComplete: function(_) {
-				remove(popup);
-				popup.destroy();
+				popup.kill();
 			}
 		});
 	}
@@ -305,6 +343,9 @@ class PlayState extends MusicBeatState
 				if (!char.isSinging)
 					char.dance();
 
+		iconP1.bop();
+		iconP2.bop();
+
 		super.beatHit();
 
 		callScriptFunction("beatHitPost");
@@ -321,6 +362,10 @@ class PlayState extends MusicBeatState
 		switch event.name
 		{
 			case "Camera Target": // dear god i need too fix this up-
+				if (event.values[1] == "Classic") {
+					camGame.followLerp = 0.12;
+				}
+
 				gameCameraFollow.setPosition(strumLines.members[event.values[0]].characters[0].getMidpoint().x
 					+ strumLines.members[event.values[0]].characters[0].characterData.cameraOffset[0],
 					strumLines.members[event.values[0]].characters[0].getMidpoint().y
