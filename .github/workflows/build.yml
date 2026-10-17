@@ -14,8 +14,6 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
-        with:
-          submodules: true
 
       - name: Install Haxe
         uses: HaxeFoundation/setup-haxe@v2.0.3
