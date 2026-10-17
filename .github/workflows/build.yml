@@ -29,7 +29,7 @@ jobs:
           haxelib set lime git -y
 
       - name: Build Windows target
-        run: haxelib run lime build Project.xml windows
+        run: haxelib run lime build windows
 
       - name: Upload Windows build
         uses: actions/upload-artifact@v4
