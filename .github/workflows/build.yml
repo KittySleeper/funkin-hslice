@@ -16,7 +16,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Haxe
-        uses: HaxeFoundation/setup-haxe@v1
+        uses: HaxeFoundation/setup-haxe@v2.0.3
         with:
           haxe-version: 4.3.2
 
