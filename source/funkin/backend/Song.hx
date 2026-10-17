@@ -14,6 +14,7 @@ class Song
 			bpm: 0,
 			format: "HSlice Format",
 			events: [],
+			stage: "",
 			strumLines: [
 				{
 					notes: [],
@@ -74,6 +75,7 @@ class Song
 				if (characters.player != null)
 					finalChart.strumLines[1].characters.push(characters.player);
 			}
+			finalChart.stage = playData.stage;
 
 			var scrollSpeeds:Dynamic = songJson.scrollSpeed;
 			var scrollSpeed:Float = scrollSpeeds != null
@@ -142,6 +144,7 @@ class Song
 
 			finalChart.strumLines[0].characters.push(songJson.player2);
 			finalChart.strumLines[1].characters.push(songJson.player1);
+			finalChart.stage = songJson.stage;
 
 			for (i => section in cast(songJson.notes, Array<Dynamic>))
 			{
@@ -210,6 +213,7 @@ typedef Chart =
 {
 	format:String,
 	bpm:Float,
+	stage:String,
 	events:Array<EventData>,
 	strumLines:Array<LineData>
 }
@@ -237,4 +241,12 @@ typedef NoteData =
 	direction:Int,
 	sustainLength:Float,
 	type:String
+}
+
+typedef SongMetaData = {
+    name:String,
+    displayName:String,
+    difficulties:Array<String>,
+    icon:String,
+    color:String
 }

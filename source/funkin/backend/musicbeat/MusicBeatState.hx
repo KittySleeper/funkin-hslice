@@ -16,6 +16,7 @@ import flixel.FlxState;
  */
 class MusicBeatState extends FlxState
 {
+	public var haxescripts:Array<HScript> = [];
 	public var curBeat(get, never):Int;
 	public var curStep(get, never):Int;
 
@@ -31,6 +32,9 @@ class MusicBeatState extends FlxState
 
 	override public function create()
 	{
+		var stateName = Type.getClassName(Type.getClass(FlxG.state)).split(".").pop();
+
+		createHScript('states/$stateName');
 		super.create();
 	}
 
@@ -58,5 +62,51 @@ class MusicBeatState extends FlxState
 
 	public function beatHit():Void
 	{
+	}
+
+	/**
+	 * Creates A HScript And Pushes It Too The HaxeScript Array
+	 * @param scriptPath Path Too The Script
+	 * @return HScript
+	 */
+	public function createHScript(scriptPath:String, autoCallCreate:Bool = true, autoPushTooScriptArray:Bool = true):Null<HScript> {
+		var resolvedPath = HScript.resolvePath(scriptPath);
+
+		if (resolvedPath == null)
+			return null;
+
+		try {
+			var script:HScript = new HScript(resolvedPath, this);
+			script.set("add", add);
+			script.set("remove", remove);
+			script.set("insert", insert);
+			script.execute();
+			script.syncParentFields();
+
+			if (autoCallCreate && script.exists("create"))
+				script.call("create");
+
+			if (autoPushTooScriptArray)
+				haxescripts.push(script);
+
+			return script;
+		} catch (e:Dynamic) {
+			trace('Failed to load script "$resolvedPath": $e');
+			return null;
+		}
+	}
+
+	/**
+	 * Calls A Function In Every Script Loaded
+	 * @param func The Name Of The Function
+	 * @param args Arguements Of The Function (Optional)
+	 */
+	public function callScriptFunction(func:String, ?args:Array<Dynamic>) {
+		for (script in haxescripts)
+		{
+			script.syncParentFields();
+			if (script.exists(func))
+				script.call(func, args);
+		}
 	}
 }

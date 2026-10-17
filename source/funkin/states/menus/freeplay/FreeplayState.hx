@@ -31,9 +31,7 @@ class FreeplayState extends MusicBeatState {
         FlxG.camera.scroll.y = CoolUtil.coolLerp(songObjects.members[curSelected].y, FlxG.camera.scroll.y, 0.35, elapsed);
 
         if (FlxG.keys.justPressed.ENTER) {
-            PlayState.curSong = songs[curSelected].name;
-            PlayState.curDifficulty = songs[curSelected].difficulties[songs[curSelected].difficulties.length - 1];
-            PlayState.songData = Song.loadSong(songs[curSelected].name, songs[curSelected].difficulties[songs[curSelected].difficulties.length - 1]);
+            PlayState.loadSong(songs[curSelected].name, songs[curSelected].difficulties[songs[curSelected].difficulties.length - 1]);
             FlxG.switchState(() -> new PlayState());
         }
     }
@@ -72,12 +70,4 @@ class FreeplayState extends MusicBeatState {
 
         return songs;
     }
-}
-
-typedef SongMetaData = {
-    name:String,
-    displayName:String,
-    difficulties:Array<String>,
-    icon:String,
-    color:String
 }

@@ -1,10 +1,9 @@
 package funkin.states.game;
 
+import funkin.backend.HScript;
 import funkin.states.menus.freeplay.FreeplayState;
-import funkin.states.game.objects.Character;
 import flixel.FlxObject;
-import flixel.math.FlxPoint;
-import funkin.states.game.objects.StrumLine;
+import funkin.states.game.objects.*;
 import flixel.group.FlxSpriteGroup.FlxTypedSpriteGroup;
 import openfl.desktop.ClipboardFormats;
 import openfl.desktop.Clipboard;
@@ -14,11 +13,14 @@ import funkin.backend.util.MemoryUtil;
 class PlayState extends MusicBeatState
 {
 	public static var songData:Chart;
+	public static var songMeta:SongMetaData;
 	public static var curSong:String = "";
 	public static var curDifficulty:String = "";
 	public static var events:Array<EventData> = [];
 
 	public var tracks:FlxSoundGroup = new FlxSoundGroup();
+
+	public var stage:Stage;
 
 	public var strumLines:FlxTypedSpriteGroup<StrumLine> = new FlxTypedSpriteGroup();
 	public var healthBarBG:FlxSprite;
@@ -37,7 +39,8 @@ class PlayState extends MusicBeatState
 	public var camZoomingInterval:Int = 4;
 	public var camZoomingStrength:Float = 1;
 
-	public var endSong:Void->Void = () -> {
+	public var endSong:Void->Void = () ->
+	{
 		FlxG.switchState(() -> new FreeplayState());
 	};
 
@@ -56,9 +59,8 @@ class PlayState extends MusicBeatState
 		FlxG.sound.music = tracks.sounds[0];
 		FlxG.sound.music.onComplete = endSong;
 		Conductor.mapBPMChanges(songData);
-		
+
 		camGame = new FlxCamera();
-		camGame.bgColor = FlxColor.GRAY;
 		camGame.zoom = gameDefaultZoom;
 		camGame.follow(gameCameraFollow, LOCKON, FlxMath.MAX_VALUE_FLOAT);
 		FlxG.cameras.reset(camGame);
@@ -67,8 +69,23 @@ class PlayState extends MusicBeatState
 		camHUD.zoom = hudDefaultZoom;
 		camHUD.bgColor = FlxColor.TRANSPARENT;
 		FlxG.cameras.add(camHUD, false);
-		super.create();
-		super.create();
+
+		stage = new Stage(songData.stage);
+		gameDefaultZoom = stage.stageData.zoom;
+
+		for (scriptName in Paths.readDirectory('songs/$curSong/scripts'))
+		{
+			var scriptType:String = "";
+
+			for (fileType in HScript.supportedFileTypes)
+			{
+				if (scriptName.endsWith('.$fileType'))
+					scriptType = "haxe";
+			}
+
+			if (scriptType == "haxe")
+				createHScript('songs/$curSong/scripts/$scriptName');
+		}
 
 		add(strumLines);
 
@@ -79,8 +96,12 @@ class PlayState extends MusicBeatState
 
 			for (charName in strumData.characters)
 			{ // maybe make it so that Characters are handled by strumline???
-				var char:Character = new Character(strumData.charPosition == "player" ? 750 : 0,
-					0, charName, strumData.charPosition == "player"); // position is hardcoded for now cuz Bobox said he will do stages
+				var charStageData:Stage.StageCharacterData = stage.getCharacterData(strumData.charPosition);
+				trace(charStageData);
+
+				var char:Character = new Character(charStageData.position[0], charStageData.position[1], charName, strumData.charPosition == "player");
+				char.characterData.cameraOffset[0] += charStageData.cameraOffset[0];
+				char.characterData.cameraOffset[1] += charStageData.cameraOffset[1];
 				strum.characters.push(char);
 				add(char);
 			}
@@ -99,10 +120,18 @@ class PlayState extends MusicBeatState
 
 		for (obj in [healthBarBG, healthBar, strumLines])
 			obj.camera = camHUD;
+
+		stage.addObjects();
+
+		super.create();
+
+		callScriptFunction("createPost");
 	}
 
 	override public function destroy()
 	{
+		callScriptFunction("destroy");
+
 		songData.events = null;
 		songData.strumLines = null;
 		songData = null;
@@ -115,7 +144,10 @@ class PlayState extends MusicBeatState
 
 	override public function update(elapsed:Float)
 	{
-		if (FlxG.keys.justPressed.ESCAPE) endSong();
+		callScriptFunction("update", [elapsed]);
+
+		if (FlxG.keys.justPressed.ESCAPE)
+			endSong();
 
 		for (event in events)
 		{
@@ -134,11 +166,13 @@ class PlayState extends MusicBeatState
 		camHUD.zoom = CoolUtil.coolLerp(hudDefaultZoom, camHUD.zoom, 0.95, elapsed);
 
 		super.update(elapsed);
+
+		callScriptFunction("updatePost", [elapsed]);
 	}
 
 	override function beatHit()
 	{
-		super.beatHit();
+		callScriptFunction("beatHit");
 
 		if (camGame.zoom < 1.35 && curBeat % camZoomingInterval == 0)
 		{
@@ -150,6 +184,10 @@ class PlayState extends MusicBeatState
 			for (char in strum.characters)
 				if (!char.isSinging)
 					char.dance();
+
+		super.beatHit();
+
+		callScriptFunction("beatHitPost");
 	}
 
 	override public function onFocus():Void
@@ -166,10 +204,19 @@ class PlayState extends MusicBeatState
 				gameCameraFollow.setPosition(strumLines.members[event.values[0]].characters[0].getMidpoint().x
 					+ strumLines.members[event.values[0]].characters[0].characterData.cameraOffset[0],
 					strumLines.members[event.values[0]].characters[0].getMidpoint().y
-					+ strumLines.members[event.values[0]].characters[0].characterData.cameraOffset[1]);
+						+ strumLines.members[event.values[0]].characters[0].characterData.cameraOffset[1]);
 			case "Camera Beat Interval Change":
 				camZoomingStrength = event.values[0];
 				camZoomingInterval = event.values[1];
 		}
+
+		callScriptFunction("eventHit", [event]);
+	}
+
+	public static function loadSong(songName:String, songDifficulty:String = "hard")
+	{
+		curSong = songName;
+		curDifficulty = songDifficulty;
+		songData = Song.loadSong(curSong, curDifficulty);
 	}
 }

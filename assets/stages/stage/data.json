@@ -1,0 +1,56 @@
+{
+  "zoom": 1.1,
+  "imagePath": "stages/stage/assets",
+  "characterData": {
+    "player": {
+      "position": [770, 100],
+      "cameraOffset": [-150, -85]
+    },
+    "spectator": {
+      "position": [400, 130],
+      "cameraOffset": [0, 0]
+    },
+    "opponent": {
+      "position": [100, 100],
+      "cameraOffset": [0, 0]
+    }
+  },
+  "objects": [
+    {
+      "name": "stageBack",
+      "imagePath": "stageback",
+      "animated": false,
+      "animations": [],
+      "position": [-600, -200],
+      "scale": [1, 1],
+      "scrollFactor": [0.9, 0.9],
+      "updateHitbox": false,
+      "antialiasing": true,
+      "zIndex": 0
+    },
+    {
+      "name": "stageFront",
+      "imagePath": "stagefront",
+      "animated": false,
+      "animations": [],
+      "position": [-650, 600],
+      "scale": [1.1, 1.1],
+      "scrollFactor": [0.9, 0.9],
+      "updateHitbox": false,
+      "antialiasing": true,
+      "zIndex": 0
+    },
+    {
+      "name": "stageCurtains",
+      "imagePath": "stagecurtains",
+      "animated": false,
+      "animations": [],
+      "position": [-500, -300],
+      "scale": [0.9, 0.9],
+      "scrollFactor": [1.3, 1.3],
+      "updateHitbox": false,
+      "antialiasing": true,
+      "zIndex": 30
+    }
+  ]
+}

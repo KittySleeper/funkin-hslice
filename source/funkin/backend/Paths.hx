@@ -14,7 +14,7 @@ class Paths
 	public static var epicCacheFromOhio:Map<String, Dynamic> = [];
 
 	inline public static var SOUND_EXT:String = #if web "mp3" #else "ogg" #end;
-	public static var ASSETS_PATH:Array<String> = ["assets"];
+	public static var ASSETS_PATHS:Array<String> = ["assets"];
 
 	inline static public function sound(key:String):Sound
 	{
@@ -127,7 +127,7 @@ class Paths
 	static public function exists(key:String):Bool
 	{
 		#if sys
-		for (path in ASSETS_PATH)
+		for (path in ASSETS_PATHS)
 		{
 			if (FileSystem.exists('$path/$key'))
 				return true;
@@ -140,7 +140,7 @@ class Paths
 
 	static public function rawFile(key:String):String
 	{
-		for (path in ASSETS_PATH)
+		for (path in ASSETS_PATHS)
 		{
 			#if sys
 			if (FileSystem.exists('$path/$key'))
@@ -153,17 +153,18 @@ class Paths
 
 	static public function readDirectory(key:String):Array<String>
 	{
+		var dirList:Array<String> = [];
+
 		#if sys
-		for (path in ASSETS_PATH)
+		for (path in ASSETS_PATHS)
 		{
 			if (FileSystem.exists('$path/$key'))
-				return FileSystem.readDirectory('$path/$key');
+				for (dir in FileSystem.readDirectory('$path/$key'))
+					dirList.push(dir);
 		}
-
-		return [];
-		#else
-		return [];
 		#end
+
+		return dirList;
 	}
 
 	inline static public function dumpCache():Void
