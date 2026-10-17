@@ -296,6 +296,15 @@ class Song
 			finalChart.strumLines[1].characters.push(songJson.player1);
 			finalChart.stage = songJson.stage;
 
+			for (i => events in cast(songJson.events, Array<Dynamic>))
+			{
+				finalChart.events.push({
+					time: events[0],
+					name: events[1][0],
+					values: [events[1][1], events[1][2]]
+				});
+			}
+
 			for (i => section in cast(songJson.notes, Array<Dynamic>))
 			{
 				var sectionBpm:Float = section.bpm != null ? section.bpm : currentBpm;
