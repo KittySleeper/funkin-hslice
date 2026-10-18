@@ -1,6 +1,9 @@
 package funkin.backend.musicbeat;
 
 import flixel.FlxState;
+#if cpp
+import funkin.backend.LuaScript;
+#end
 
 /**
 	* State That Handles Things For Conductor
@@ -17,6 +20,9 @@ import flixel.FlxState;
 class MusicBeatState extends FlxState
 {
 	public var haxescripts:Array<HScript> = [];
+	#if cpp
+	public var luascripts:Array<LuaScript> = [];
+	#end
 	public var curBeat(get, never):Int;
 	public var curStep(get, never):Int;
 
@@ -35,7 +41,21 @@ class MusicBeatState extends FlxState
 		var stateName = Type.getClassName(Type.getClass(FlxG.state)).split(".").pop();
 
 		createHScript('states/$stateName');
+		#if cpp
+		createLuaScript('states/$stateName');
+		#end
 		super.create();
+	}
+
+	override public function destroy()
+	{
+		callScriptFunction("destroy");
+		#if cpp
+		for (script in luascripts)
+			script.close();
+		luascripts = [];
+		#end
+		super.destroy();
 	}
 
 	override public function update(elapsed:Float)
@@ -102,6 +122,30 @@ class MusicBeatState extends FlxState
 		}
 	}
 
+	#if cpp
+	public function createLuaScript(scriptPath:String, autoCallCreate:Bool = true):Null<LuaScript>
+	{
+		var resolvedPath:String = scriptPath;
+		if (!Paths.exists(resolvedPath))
+		{
+			var luaPath:String = '$scriptPath.lua';
+			if (Paths.exists(luaPath))
+				resolvedPath = luaPath;
+			else
+				resolvedPath = null;
+		}
+
+		if (resolvedPath == null)
+			return null;
+
+		var script:LuaScript = new LuaScript(resolvedPath, this);
+		luascripts.push(script);
+		if (autoCallCreate)
+			script.call("create");
+		return script;
+	}
+	#end
+
 	/**
 	 * Calls A Function In Every Script Loaded
 	 * @param func The Name Of The Function
@@ -114,5 +158,9 @@ class MusicBeatState extends FlxState
 			if (script.exists(func))
 				script.call(func, args);
 		}
+		#if cpp
+		for (script in luascripts)
+			script.call(func, args);
+		#end
 	}
 }

@@ -5,6 +5,9 @@ class Note extends FlxSprite {
     public var sustainBody:FlxSprite = null;
     public var sustainEnd:FlxSprite = null;
     public var wasHit:Bool = false;
+    public var sustainScore:Int = 0;
+    public var sustainScoreStartTime:Float = 0;
+    public var sustainScoreAwarded:Int = 0;
     public static var directionList:Array<String> = ["left", "down", "up", "right"];
 
     override public function new(x:Float, y:Float, noteData:NoteData) {

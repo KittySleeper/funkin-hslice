@@ -109,6 +109,10 @@ class PlayState extends MusicBeatState
 
 			if (scriptType == "haxe")
 				createHScript('songs/$curSong/scripts/$scriptName');
+			#if cpp
+			else if (scriptName.endsWith(".lua"))
+				createLuaScript('songs/$curSong/scripts/$scriptName');
+			#end
 		}
 
 		add(ratingGroup);
@@ -155,7 +159,7 @@ class PlayState extends MusicBeatState
 
 		scoreTxt = new FlxText(0, healthBarBG.y + 35, FlxG.width, "");
 		scoreTxt.setFormat(Paths.font("vcr"), 20, FlxColor.WHITE, CENTER, OUTLINE, FlxColor.BLACK);
-		updatescoreTxt();
+		updateScoreTxt();
 		add(scoreTxt);
 
 		for (obj in [ratingGroup, healthBarBG, healthBar, iconP1, iconP2, scoreTxt, strumLines])
@@ -170,14 +174,12 @@ class PlayState extends MusicBeatState
 
 	override public function destroy()
 	{
-		callScriptFunction("destroy");
+		super.destroy();
 
 		songData.events = null;
 		songData.strumLines = null;
 		songData = null;
 		events = null;
-
-		super.destroy();
 
 		MemoryUtil.clearAll();
 	}
@@ -218,13 +220,20 @@ class PlayState extends MusicBeatState
 	{
 		var healthPoint:Float = healthBar.x + healthBar.width * (1 - FlxMath.bound(healthBar.percent / 100, 0, 1));
 		var iconOverlap:Float = 25;
-		
+
 		iconP2.setPosition(healthPoint - iconP2.width + iconOverlap, healthBar.y + (healthBar.height - iconP2.frameHeight) * 0.5);
 		iconP1.setPosition(healthPoint - iconOverlap, healthBar.y + (healthBar.height - iconP1.frameHeight) * 0.5);
 	}
 
-	function onPlayerJudgement(rating:RatingData):Void
+	function onPlayerJudgement(rating:RatingData, scorePoints:Int = 0):Void
 	{
+		if (rating == null)
+		{
+			score += scorePoints;
+			updateScoreTxt();
+			return;
+		}
+
 		totalJudgedNotes++;
 		totalAccuracyWeight += rating.accuracyWeight;
 
@@ -241,13 +250,13 @@ class PlayState extends MusicBeatState
 		health = FlxMath.bound(health + rating.health, 0, 100);
 
 		accuracy = totalAccuracyWeight / totalJudgedNotes * 100;
-		updatescoreTxt();
+		updateScoreTxt();
 		showRating(rating);
 	}
 
-	function updatescoreTxt():Void
+	function updateScoreTxt():Void
 	{
-		scoreTxt.text = 'Score: $score • Misses: $misses • Accuracy: ${FlxMath.roundDecimal(accuracy, 2)}%';
+		scoreTxt.text = 'Score: ${FlxStringUtil.formatMoney(score, false)} • Misses: ${FlxStringUtil.formatMoney(misses, false)} • Accuracy: ${FlxMath.roundDecimal(accuracy, 2)}%';
 	}
 
 	function showRating(rating:RatingData):Void
@@ -258,7 +267,7 @@ class PlayState extends MusicBeatState
 		if (!ratingGroup.members.isEmpty())
 			for (rating in ratingGroup.members)
 				rating.kill();
-		
+
 		ratingGroup.clear();
 
 		var ratingSprite:FlxSprite = new FlxSprite();
@@ -322,7 +331,8 @@ class PlayState extends MusicBeatState
 		ratingGroup.add(popup);
 		FlxTween.tween(popup, {alpha: 0}, 0.2, {
 			startDelay: 0.2,
-			onComplete: function(_) {
+			onComplete: function(_)
+			{
 				popup.kill();
 			}
 		});
@@ -362,7 +372,8 @@ class PlayState extends MusicBeatState
 		switch event.name
 		{
 			case "Camera Target": // dear god i need too fix this up-
-				if (event.values[1] == "Classic") {
+				if (event.values[1] == "Classic")
+				{
 					camGame.followLerp = 0.12;
 				}
 

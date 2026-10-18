@@ -17,7 +17,7 @@ class StrumLine extends FlxTypedSpriteGroup<FlxSprite> {
     public var isPlayerLine(default, null):Bool = false;
     public var notes:FlxTypedSpriteGroup<FlxSprite> = new FlxTypedSpriteGroup();
     public var characters:Array<Character> = [];
-    public var onJudgement:RatingData->Void;
+    public var onJudgement:(RatingData, Int)->Void;
     var heldKeys:Array<Bool> = [false, false, false, false];
     var physicalKeys:Array<Bool> = [false, false, false, false];
     var inputEvents:Array<{direction:Int, isDown:Bool}> = [];
@@ -244,6 +244,24 @@ class StrumLine extends FlxTypedSpriteGroup<FlxSprite> {
 
             note.updateSustain(pixelsPerMs, receptor.y + receptor.height * 0.5, Conductor.visualSongPosition);
 
+            if (note.wasHit && note.noteData.sustainLength > 0 && isPlayerLine && heldKeys[note.noteData.direction])
+            {
+                var sustainScoreDuration:Float = noteEndTime - note.sustainScoreStartTime;
+                if (sustainScoreDuration > 0)
+                {
+                    var sustainProgress:Float = FlxMath.bound(
+                        (Math.min(Conductor.songPosition, noteEndTime) - note.sustainScoreStartTime) / sustainScoreDuration, 0, 1);
+                    var earnedScore:Int = Std.int(note.sustainScore * sustainProgress);
+                    var scoreToAward:Int = earnedScore - note.sustainScoreAwarded;
+                    if (scoreToAward > 0)
+                    {
+                        note.sustainScoreAwarded = earnedScore;
+                        if (onJudgement != null)
+                            onJudgement(null, scoreToAward);
+                    }
+                }
+            }
+
             if (note.wasHit && note.noteData.sustainLength > 0 && Conductor.songPosition < noteEndTime) {
                 if (isPlayerLine && !heldKeys[note.noteData.direction])
                 {
@@ -304,6 +322,11 @@ class StrumLine extends FlxTypedSpriteGroup<FlxSprite> {
             var offset:Float = Conductor.songPosition - note.noteData.time;
             var rating:RatingData = ratingForOffset(offset);
             registerJudgement(rating);
+            if (note.noteData.sustainLength > 0)
+            {
+                note.sustainScore = rating.score;
+                note.sustainScoreStartTime = Conductor.songPosition;
+            }
             if (rating.shouldSplash)
                 showNoteSplash(receptor, note.noteData.direction);
         }
@@ -416,7 +439,7 @@ class StrumLine extends FlxTypedSpriteGroup<FlxSprite> {
     function registerJudgement(rating:RatingData):Void
     {
         if (isPlayerLine && onJudgement != null)
-            onJudgement(rating);
+            onJudgement(rating, 0);
     }
 
     function removeNote(note:Note):Void
