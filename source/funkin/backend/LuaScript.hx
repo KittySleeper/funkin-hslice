@@ -21,6 +21,8 @@ class LuaScript {
     private var callbackNames:Array<String> = [];
     private var sprites:Map<String, FlxSprite> = [];
     private var objectReferences:Map<String, Dynamic> = [];
+    private var fieldPathCache:Map<String, Array<String>> = [];
+    private var propertyCache:Map<String, Map<String, Bool>> = [];
     private var nextObjectReference:Int = 0;
     private var closed:Bool = false;
 
@@ -381,13 +383,17 @@ class LuaScript {
 
     private function parseFieldPath(field:String):Array<String>
     {
+        if (fieldPathCache.exists(field))
+            return fieldPathCache.get(field).copy();
+
         var path:Array<String> = field.split(".");
         for (fieldName in path)
         {
             if (fieldName == "")
                 throw 'Invalid game field "$field".';
         }
-        return path;
+        fieldPathCache.set(field, path);
+        return path.copy();
     }
 
     private function resolveFieldTarget(path:Array<String>, fieldName:String, fullField:String):Dynamic
@@ -424,17 +430,37 @@ class LuaScript {
             return true;
 
         var targetClass:Class<Dynamic> = cast Type.getClass(target);
+        if (targetClass == null)
+            return false;
+
+        var className:String = Type.getClassName(targetClass);
+        var classProperties:Map<String, Bool> = propertyCache.get(className);
+        if (classProperties != null && classProperties.exists(field))
+            return classProperties.get(field);
+
+        var found:Bool = false;
         while (targetClass != null)
         {
             for (instanceField in Type.getInstanceFields(targetClass))
             {
                 if (instanceField == field || instanceField == 'get_$field' || instanceField == 'set_$field')
-                    return true;
+                {
+                    found = true;
+                    break;
+                }
             }
+            if (found)
+                break;
             targetClass = cast Type.getSuperClass(targetClass);
         }
 
-        return false;
+        if (classProperties == null)
+        {
+            classProperties = [];
+            propertyCache.set(className, classProperties);
+        }
+        classProperties.set(field, found);
+        return found;
     }
 
     private function execute(source:String, chunkName:String):Void
