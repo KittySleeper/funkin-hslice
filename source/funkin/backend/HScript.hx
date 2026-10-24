@@ -25,6 +25,9 @@ class HScript extends Iris {
         "Strum" => funkin.states.game.objects.Strum,
         "Song" => Song,
         "Conductor" => Conductor,
+
+        //Misc
+        "CustomShader" => funkin.shaders.CustomShader
     ];
 
     public static function resolvePath(scriptPath:String):Null<String> {

@@ -31,6 +31,14 @@ class Song
 					characters: [],
 					charPosition: "player",
 					scrollSpeed: 1
+				},
+				{
+					notes: [],
+					cpu: true,
+					position: [1380, 50],
+					characters: [],
+					charPosition: "spectator",
+					scrollSpeed: 1
 				}
 			]
 		};
@@ -74,6 +82,8 @@ class Song
 					finalChart.strumLines[0].characters.push(characters.opponent);
 				if (characters.player != null)
 					finalChart.strumLines[1].characters.push(characters.player);
+				if (characters.girlfriend != null)
+					finalChart.strumLines[2].characters.push(characters.girlfriend);
 			}
 			finalChart.stage = playData.stage;
 
@@ -111,7 +121,21 @@ class Song
 							finalChart.events.push({
 								time: sourceEvent.t,
 								name: "Camera Target",
-								values: [values.char == 1 ? 0 : 1, values.ease, values.duration, values.x, values.y]
+								values: [
+									values.char == 1 ? 0 : 1,
+									values.ease,
+									values.easeDir,
+									values.duration,
+									values.x,
+									values.y
+								]
+							});
+						case "ZoomCamera":
+							var values:Dynamic = sourceEvent.v;
+							finalChart.events.push({
+								time: sourceEvent.t,
+								name: "Camera Zoom",
+								values: [values.zoom, values.duration, values.ease, values.easeDir, values.mode]
 							});
 						case "SetCameraBop":
 							var values:Dynamic = sourceEvent.v;
@@ -249,14 +273,46 @@ class Song
 								finalChart.events.push({
 									time: sourceEvent.time,
 									name: "Camera Target",
-									values: [params[0], "Classic"]
+									values: [
+										params[0],
+										params.length > 3 && params[3] != null ? params[3] : "CLASSIC",
+										params.length > 4 && params[4] != null ? params[4] : "In",
+										params.length > 2 && params[2] != null ? params[2] : 4,
+										params.length > 5 && params[5] != null ? params[5] : 0,
+										params.length > 6 && params[6] != null ? params[6] : 0,
+										params.length > 1 ? params[1] != false : true
+									]
 								});
 						case "FocusCamera":
 							if (params.length > 0)
 								finalChart.events.push({
 									time: sourceEvent.time,
 									name: "Camera Target",
-									values: [params[0], "Classic"]
+									values: [
+										params[0],
+										params.length > 3 && params[3] != null ? params[3] : "CLASSIC",
+										params.length > 4 && params[4] != null ? params[4] : "In",
+										params.length > 2 && params[2] != null ? params[2] : 4,
+										params.length > 5 && params[5] != null ? params[5] : 0,
+										params.length > 6 && params[6] != null ? params[6] : 0,
+										params.length > 1 ? params[1] != false : true
+									]
+								});
+						case "Camera Zoom":
+							if (params.length > 1)
+								finalChart.events.push({
+									time: sourceEvent.time,
+									name: "Camera Zoom",
+									values: [
+										params[1],
+										params.length > 3 && params[3] != null ? params[3] : 4,
+										params.length > 4 && params[4] != null ? params[4] : "linear",
+										params.length > 5 && params[5] != null ? params[5] : "In",
+										params.length > 6 && params[6] != null ? params[6] : "direct",
+										params.length > 0 ? params[0] != false : true,
+										params.length > 2 && params[2] != null ? params[2] : "camGame",
+										params.length > 7 ? params[7] == true : false
+									]
 								});
 						case "SetCameraBop":
 							if (params.length >= 2)
@@ -294,6 +350,7 @@ class Song
 
 			finalChart.strumLines[0].characters.push(songJson.player2);
 			finalChart.strumLines[1].characters.push(songJson.player1);
+			finalChart.strumLines[2].characters.push(songJson.gfVersion);
 			finalChart.stage = songJson.stage;
 
 			for (i => events in cast(songJson.events, Array<Dynamic>))

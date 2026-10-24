@@ -2,6 +2,7 @@ package funkin.states.game.objects;
 
 import funkin.backend.HScript;
 import flixel.group.FlxContainer;
+import flixel.util.FlxColor;
 
 /**
  * Makes A Stage, You Need Too Call
@@ -58,7 +59,12 @@ class Stage {
     public function addObjects() {
         for (object in stageData.objects) {
             var sprite:FlxSprite = new FlxSprite(object.position[0], object.position[1]);
-            if (object.animated) {
+            if (object.color != null) {
+                var color = FlxColor.fromString(object.color);
+                if (color == null)
+                    throw 'Invalid color "${object.color}" for stage object "${object.name}".';
+                sprite.makeGraphic(1, 1, color);
+            } else if (object.animated) {
                 sprite.frames = Paths.getSparrowAtlas(object.imagePath, stageData.imagePath);
                 for (animation in object.animations) {
                     sprite.animation.addByPrefix(animation.prefix, animation.postfix, animation.fps, animation.looped);
@@ -92,12 +98,14 @@ typedef StageData = {
 
 typedef StageCharacterData = {
     position:Array<Float>,
-    cameraOffset:Array<Float>
+    cameraOffset:Array<Float>,
+    ?zIndex:Int
 }
 
 typedef ObjectData = {
     name:String,
-    imagePath:String,
+    ?imagePath:String,
+    ?color:String,
     animated:Bool,
     animations:Array<Character.AnimationData>,
     position:Array<Float>,

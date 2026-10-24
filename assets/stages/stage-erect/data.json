@@ -1,0 +1,155 @@
+{
+  "zoom": 0.85,
+  "imagePath": "stages/stage-erect/assets",
+  "characterData": {
+    "player": {
+      "position": [777.5, 110],
+      "cameraOffset": [-215, -125],
+      "zIndex": 300
+    },
+    "spectator": {
+      "position": [271.5, 180],
+      "cameraOffset": [0, 0],
+      "zIndex": 0
+    },
+    "opponent": {
+      "position": [-200, 90],
+      "cameraOffset": [250, -65],
+      "zIndex": 200
+    }
+  },
+  "objects": [
+    {
+      "name": "solid",
+      "color": "#222026",
+      "animated": false,
+      "animations": [],
+      "position": [900, 900],
+      "scale": [2400, 2000],
+      "scrollFactor": [0, 0],
+      "updateHitbox": false,
+      "antialiasing": false,
+      "zIndex": 0
+    },
+    {
+      "name": "crowd",
+      "imagePath": "crowd",
+      "animated": true,
+      "animations": [
+        {
+          "prefix": "idle",
+          "postfix": "idle0",
+          "fps": 12,
+          "looped": true
+        }
+      ],
+      "position": [682, 290],
+      "scale": [1, 1],
+      "scrollFactor": [0.8, 0.8],
+      "updateHitbox": false,
+      "antialiasing": true,
+      "zIndex": 1
+    },
+    {
+      "name": "brightLightSmall",
+      "imagePath": "brightLightSmall",
+      "animated": false,
+      "animations": [],
+      "position": [967, -103],
+      "scale": [1, 1],
+      "scrollFactor": [1.2, 1.2],
+      "updateHitbox": false,
+      "antialiasing": true,
+      "alpha": 1,
+      "zIndex": 2
+    },
+    {
+      "name": "bg",
+      "imagePath": "bg",
+      "animated": false,
+      "animations": [],
+      "position": [-765, -247],
+      "scale": [1, 1],
+      "scrollFactor": [1, 1],
+      "updateHitbox": false,
+      "antialiasing": true,
+      "zIndex": 3
+    },
+    {
+      "name": "server",
+      "imagePath": "server",
+      "animated": false,
+      "animations": [],
+      "position": [-991, 205],
+      "scale": [1, 1],
+      "scrollFactor": [1, 1],
+      "updateHitbox": false,
+      "antialiasing": true,
+      "zIndex": 4
+    },
+    {
+      "name": "lightgreen",
+      "imagePath": "lightgreen",
+      "animated": false,
+      "animations": [],
+      "position": [-171, 242],
+      "scale": [1, 1],
+      "scrollFactor": [1, 1],
+      "updateHitbox": false,
+      "antialiasing": true,
+      "alpha": 1,
+      "zIndex": 5
+    },
+    {
+      "name": "lightred",
+      "imagePath": "lightred",
+      "animated": false,
+      "animations": [],
+      "position": [-101, 560],
+      "scale": [1, 1],
+      "scrollFactor": [1, 1],
+      "updateHitbox": false,
+      "antialiasing": true,
+      "alpha": 1,
+      "zIndex": 6
+    },
+    {
+      "name": "orangeLight",
+      "imagePath": "orangeLight",
+      "animated": false,
+      "animations": [],
+      "position": [189, -500],
+      "scale": [1, 1700],
+      "scrollFactor": [1, 1],
+      "updateHitbox": false,
+      "antialiasing": true,
+      "alpha": 1,
+      "zIndex": 7
+    },
+    {
+      "name": "lights",
+      "imagePath": "lights",
+      "animated": false,
+      "animations": [],
+      "position": [-847, -245],
+      "scale": [1, 1],
+      "scrollFactor": [1.2, 1.2],
+      "updateHitbox": false,
+      "antialiasing": true,
+      "zIndex": 4000
+    },
+    {
+      "name": "lightAbove",
+      "imagePath": "lightAbove",
+      "animated": false,
+      "animations": [],
+      "position": [804, -117],
+      "scale": [1, 1],
+      "scrollFactor": [1, 1],
+      "updateHitbox": false,
+      "antialiasing": true,
+      "alpha": 1,
+      "zIndex": 4500
+    }
+  ]
+}

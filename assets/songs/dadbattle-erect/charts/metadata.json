@@ -14,7 +14,7 @@
       "opponentVocals": ["dad"],
       "playerVocals": ["bf"]
     },
-    "stage": "mainStageErect",
+    "stage": "stage-erect",
     "noteStyle": "funkin",
     "ratings": { "erect": 9, "nightmare": 10 },
     "album": "volume3"

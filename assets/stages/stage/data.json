@@ -4,15 +4,18 @@
   "characterData": {
     "player": {
       "position": [770, 100],
-      "cameraOffset": [-150, -85]
+      "cameraOffset": [-150, -85],
+      "zIndex": 10
     },
     "spectator": {
       "position": [400, 130],
-      "cameraOffset": [0, 0]
+      "cameraOffset": [0, 0],
+      "zIndex": 0
     },
     "opponent": {
       "position": [100, 100],
-      "cameraOffset": [0, 0]
+      "cameraOffset": [0, 0],
+      "zIndex": 10
     }
   },
   "objects": [

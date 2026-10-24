@@ -4,6 +4,8 @@ import funkin.backend.HScript;
 import funkin.states.menus.freeplay.FreeplayState;
 import flixel.FlxObject;
 import flixel.tweens.FlxTween;
+import flixel.tweens.FlxEase;
+import flixel.tweens.FlxEase.EaseFunction;
 import funkin.states.game.objects.StrumLine.RatingData;
 import funkin.states.game.objects.*;
 import flixel.group.FlxSpriteGroup.FlxTypedSpriteGroup;
@@ -56,6 +58,9 @@ class PlayState extends MusicBeatState
 	public var gameDefaultZoom:Float = 0.85;
 	public var gameCameraFollow:FlxObject = new FlxObject();
 	public var gameCameraFollowShouldLerp:Bool = false;
+	var cameraMoveTween:FlxTween;
+	var cameraZoomTween:FlxTween;
+	var cameraHudZoomTween:FlxTween;
 
 	public var camHUD:FlxCamera;
 	public var hudDefaultZoom:Float = 1;
@@ -95,6 +100,7 @@ class PlayState extends MusicBeatState
 		FlxG.cameras.add(camHUD, false);
 
 		stage = new Stage(songData.stage);
+
 		gameDefaultZoom = stage.stageData.zoom;
 
 		for (scriptName in Paths.readDirectory('songs/$curSong/scripts'))
@@ -133,9 +139,14 @@ class PlayState extends MusicBeatState
 				char.characterData.cameraOffset[0] += charStageData.cameraOffset[0];
 				char.characterData.cameraOffset[1] += charStageData.cameraOffset[1];
 				strum.characters.push(char);
-				add(char);
+				if (charStageData.zIndex != null)
+					insert(charStageData.zIndex, char);
+				else
+					insert(stage.stageData.objects[stage.stageData.objects.length - 1].zIndex, char);
 			}
 		}
+
+		stage.addObjects();
 
 		healthBarBG = new FlxSprite(0, FlxG.height * 0.9).loadGraphic(Paths.image('game/healthBar'));
 		healthBarBG.screenCenter(X);
@@ -165,8 +176,6 @@ class PlayState extends MusicBeatState
 		for (obj in [ratingGroup, healthBarBG, healthBar, iconP1, iconP2, scoreTxt, strumLines])
 			obj.camera = camHUD;
 
-		stage.addObjects();
-
 		super.create();
 
 		callScriptFunction("createPost");
@@ -174,6 +183,13 @@ class PlayState extends MusicBeatState
 
 	override public function destroy()
 	{
+		if (cameraMoveTween != null)
+			cameraMoveTween.cancel();
+		if (cameraZoomTween != null)
+			cameraZoomTween.cancel();
+		if (cameraHudZoomTween != null)
+			cameraHudZoomTween.cancel();
+
 		super.destroy();
 
 		songData.events = null;
@@ -204,8 +220,10 @@ class PlayState extends MusicBeatState
 			if (track.playing && (track.time < tracks.sounds[0].time - 5 || track.time > tracks.sounds[0].time + 5))
 				track.time = tracks.sounds[0].time;
 
-		camGame.zoom = CoolUtil.coolLerp(gameDefaultZoom, camGame.zoom, 0.95, elapsed);
-		camHUD.zoom = CoolUtil.coolLerp(hudDefaultZoom, camHUD.zoom, 0.95, elapsed);
+		if (cameraZoomTween == null)
+			camGame.zoom = CoolUtil.coolLerp(gameDefaultZoom, camGame.zoom, 0.95, elapsed);
+		if (cameraHudZoomTween == null)
+			camHUD.zoom = CoolUtil.coolLerp(hudDefaultZoom, camHUD.zoom, 0.95, elapsed);
 
 		iconP1.health = healthBar.percent;
 		iconP2.health = healthBar.percent;
@@ -369,24 +387,177 @@ class PlayState extends MusicBeatState
 
 	function eventHit(event:EventData)
 	{
-		switch event.name
+		switch (event.name)
 		{
-			case "Camera Target": // dear god i need too fix this up-
-				if (event.values[1] == "Classic")
+			case "Camera Target":
+				var targetIndex:Int = Std.int(event.values[0]);
+				var ease:String = event.values.length > 1 && event.values[1] != null ? Std.string(event.values[1]) : "CLASSIC";
+				var easeDir:String = "InOut";
+				var duration:Float = 4;
+				var offsetX:Float = 0;
+				var offsetY:Float = 0;
+
+				if (event.values.length > 2)
 				{
-					camGame.followLerp = 0.12;
+					if (Std.isOfType(event.values[2], String))
+					{
+						easeDir = Std.string(event.values[2]);
+						if (event.values.length > 3 && event.values[3] != null)
+							duration = event.values[3];
+						if (event.values.length > 4 && event.values[4] != null)
+							offsetX = event.values[4];
+						if (event.values.length > 5 && event.values[5] != null)
+							offsetY = event.values[5];
+					}
+					else
+					{
+						if (event.values[2] != null)
+							duration = event.values[2];
+						if (event.values.length > 3 && event.values[3] != null)
+							offsetX = event.values[3];
+						if (event.values.length > 4 && event.values[4] != null)
+							offsetY = event.values[4];
+					}
 				}
 
-				gameCameraFollow.setPosition(strumLines.members[event.values[0]].characters[0].getMidpoint().x
-					+ strumLines.members[event.values[0]].characters[0].characterData.cameraOffset[0],
-					strumLines.members[event.values[0]].characters[0].getMidpoint().y
-						+ strumLines.members[event.values[0]].characters[0].characterData.cameraOffset[1]);
+
+				var targetCharacter = strumLines.members[targetIndex].characters[0];
+				var midpoint = targetCharacter.getMidpoint();
+				var targetX = midpoint.x + targetCharacter.characterData.cameraOffset[0] + offsetX;
+				var targetY = midpoint.y + targetCharacter.characterData.cameraOffset[1] + offsetY;
+
+				if (cameraMoveTween != null)
+					cameraMoveTween.cancel();
+				cameraMoveTween = null;
+
+				var shouldTween = event.values.length <= 6 || event.values[6] != false;
+				if (!shouldTween || ease.toUpperCase() == "INSTANT" || duration <= 0)
+				{
+					camGame.followLerp = FlxMath.MAX_VALUE_FLOAT;
+					gameCameraFollow.setPosition(targetX, targetY);
+				}
+				else if (ease.toUpperCase() == "CLASSIC")
+				{
+					camGame.followLerp = 0.12;
+					gameCameraFollow.setPosition(targetX, targetY);
+				}
+				else
+				{
+					var movementEase = getCameraEase(ease, easeDir);
+					camGame.followLerp = FlxMath.MAX_VALUE_FLOAT;
+					cameraMoveTween = FlxTween.tween(gameCameraFollow, {x: targetX, y: targetY},
+						duration * Conductor.stepCrochet / 1000, {
+							ease: movementEase,
+							onComplete: function(_) cameraMoveTween = null
+						});
+				}
+			case "Camera Zoom":
+				var targetZoom:Float = event.values[0];
+				var duration:Float = event.values.length > 1 && event.values[1] != null ? event.values[1] : 4;
+				var ease:String = event.values.length > 2 && event.values[2] != null ? Std.string(event.values[2]) : "linear";
+				var easeDir:String = event.values.length > 3 && event.values[3] != null ? Std.string(event.values[3]) : "InOut";
+				var mode:String = event.values.length > 4 && event.values[4] != null ? Std.string(event.values[4]) : "direct";
+				var shouldTween:Bool = event.values.length <= 5 || event.values[5] != false;
+				var cameraName:String = event.values.length > 6 && event.values[6] != null ? Std.string(event.values[6]) : "camGame";
+				var multiplicative:Bool = event.values.length > 7 && event.values[7] == true;
+				var camera = cameraName == "camHUD" ? camHUD : camGame;
+
+				targetZoom *= switch (mode.toLowerCase())
+				{
+					case "stage": stage.stageData.zoom;
+					case "direct": 1;
+					default: throw 'Camera Zoom event has unsupported mode "$mode".';
+				}
+				if (multiplicative)
+					targetZoom *= camera.zoom;
+
+				var activeZoomTween = camera == camHUD ? cameraHudZoomTween : cameraZoomTween;
+				if (activeZoomTween != null)
+					activeZoomTween.cancel();
+				if (camera == camHUD)
+					cameraHudZoomTween = null;
+				else
+					cameraZoomTween = null;
+
+				if (!shouldTween || ease.toUpperCase() == "INSTANT" || ease.toUpperCase() == "CLASSIC" || duration <= 0)
+				{
+					camera.zoom = targetZoom;
+					if (camera == camHUD)
+						hudDefaultZoom = targetZoom;
+					else
+						gameDefaultZoom = targetZoom;
+				}
+				else
+				{
+					var zoomTween = FlxTween.tween(camera, {zoom: targetZoom},
+						duration * Conductor.stepCrochet / 1000, {
+							ease: getCameraEase(ease, easeDir),
+							onComplete: function(_)
+							{
+								if (camera == camHUD)
+								{
+									hudDefaultZoom = targetZoom;
+									cameraHudZoomTween = null;
+								}
+								else
+								{
+									gameDefaultZoom = targetZoom;
+									cameraZoomTween = null;
+								}
+							}
+						});
+					if (camera == camHUD)
+						cameraHudZoomTween = zoomTween;
+					else
+						cameraZoomTween = zoomTween;
+				}
 			case "Camera Beat Interval Change":
 				camZoomingStrength = event.values[0];
 				camZoomingInterval = event.values[1];
 		}
 
 		callScriptFunction("eventHit", [event]);
+	}
+
+	static function getCameraEase(ease:String, easeDir:String):EaseFunction
+	{
+		var easeName = ease.toLowerCase();
+		var direction = easeDir;
+		if (StringTools.endsWith(easeName, "inout"))
+		{
+			easeName = easeName.substr(0, easeName.length - "inout".length);
+			direction = "InOut";
+		}
+		else if (StringTools.endsWith(easeName, "in"))
+		{
+			easeName = easeName.substr(0, easeName.length - "in".length);
+			direction = "In";
+		}
+		else if (StringTools.endsWith(easeName, "out"))
+		{
+			easeName = easeName.substr(0, easeName.length - "out".length);
+			direction = "Out";
+		}
+
+		var normalizedEase = switch (easeName)
+		{
+			case "smoothstep": "smoothStep";
+			case "smootherstep": "smootherStep";
+			default: easeName;
+		};
+		var normalizedDirection = switch (direction.toLowerCase())
+		{
+			case "in": "In";
+			case "out": "Out";
+			case "inout": "InOut";
+			default: throw 'Camera event has unsupported ease direction "$direction".';
+		};
+		var resolvedEaseName = normalizedEase == "linear" ? "linear" : '$normalizedEase$normalizedDirection';
+		var easeFunction:EaseFunction = cast Reflect.field(FlxEase, resolvedEaseName);
+		if (easeFunction == null)
+			throw 'Camera event has unsupported easing "$resolvedEaseName".';
+
+		return easeFunction;
 	}
 
 	public static function loadSong(songName:String, songDifficulty:String = "hard")
