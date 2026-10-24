@@ -24,11 +24,10 @@ jobs:
 
       - name: Install HMM
         run: |
-          haxelib --global install hmm
-          haxelib --global run hmm setup
+          haxelib --global install hmm -y
 
       - name: Install Haxelibs
-        run: hmm install
+        run: haxelib --global run hmm install
 
       - name: Set up Lime
         run: |
