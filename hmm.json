@@ -1,0 +1,71 @@
+{
+  "dependencies": [
+    {
+      "name": "flixel",
+      "type": "git",
+      "ref": "622bb65e7f49f0e1a03826b6593369d3ad5e54fa",
+      "url": "https://github.com/FunkinCrew/flixel"
+    },
+    {
+      "name": "flixel-addons",
+      "type": "git",
+      "ref": "7628435364c4a45440d1e5db656741b66a8cd2ec",
+      "url": "https://github.com/FunkinCrew/flixel-addons"
+    },
+    {
+      "name": "flixel-tools",
+      "type": "haxelib",
+      "version": "1.5.1"
+    },
+    {
+      "name": "flixel-ui",
+      "type": "haxelib",
+      "version": "2.6.5"
+    },
+    {
+      "name": "hxcpp",
+      "type": "haxelib",
+      "version": "4.3.2"
+    },
+    {
+      "name": "lime",
+      "type": "git",
+      "ref": "6c2fd14ca30f688723d760581b720567bb4ee70c",
+      "url": "https://github.com/FunkinCrew/lime"
+    },
+    {
+      "name": "openfl",
+      "type": "git",
+      "ref": "9313f0689748966e4647f3f7e31cbd6176456210",
+      "url": "https://github.com/FunkinCrew/openfl"
+    },
+    {
+      "name": "tjson",
+      "type": "haxelib",
+      "version": "1.4.0"
+    },
+    {
+      "name": "linc_luajit",
+      "type": "git",
+      "ref": "daf0664aee99aa8b8d6bdd1eda993a1c3a399067",
+      "url": "https://github.com/superpowers04/linc_luajit"
+    },
+    {
+      "name": "hscript-iris",
+      "type": "git",
+      "ref": "8867c9a801a051e2bc5f9c03f06e8f88e6c574f9",
+      "url": "https://github.com/pisayesiwsi/hscript-iris"
+    },
+    {
+      "name": "flixel-animate",
+      "type": "git",
+      "ref": "dcaa33ca8845f23d7c4c441025cecaacc91b0eff",
+      "url": "https://github.com/MaybeMaru/flixel-animate"
+    },
+    {
+      "name": "HxSysInfo",
+      "type": "haxelib",
+      "version": "1.0.0"
+    }
+  ]
+}
