@@ -33,6 +33,7 @@ jobs:
 
       - name: Set up Lime
         run: |
+          haxelib run lime rebuild cpp -y
           haxelib run lime setup -y
 
       - name: Build Windows target
