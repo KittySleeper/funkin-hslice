@@ -22,11 +22,17 @@ jobs:
         with:
           haxe-version: 4.3.2
 
-      - name: Set up Haxelib and Lime
+      - name: Install HMM
         run: |
-          haxelib install lime 8.3.1 -y
+          haxelib --global install hmm
+          haxelib --global run hmm setup
+
+      - name: Install Haxelibs
+        run: hmm install
+
+      - name: Set up Lime
+        run: |
           haxelib run lime setup -y
-          haxelib set lime git -y
 
       - name: Build Windows target
         run: haxelib run lime build windows
